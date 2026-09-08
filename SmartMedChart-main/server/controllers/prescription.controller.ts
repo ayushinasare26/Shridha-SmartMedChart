@@ -7,6 +7,12 @@ import { checkAllergyConflicts } from '../services/safety.service';
 
 export const getPrescriptions = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
+    // Hospital staff cannot view confidential medication prescriptions
+    if (req.user?.role === 'ALLIED_STAFF' || req.user?.role === 'OTHER_STAFF') {
+      res.status(403).json({ error: 'Access denied: Hospital staff cannot view confidential medication prescriptions.' });
+      return;
+    }
+
     const { patientId, status, isStatOrder } = req.query;
     const prescriptions = await prisma.prescription.findMany({
       where: {
@@ -28,6 +34,11 @@ export const getPrescriptions = async (req: AuthRequest, res: Response, next: Ne
 
 export const getPrescription = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
+    // Hospital staff cannot view confidential medication prescriptions
+    if (req.user?.role === 'ALLIED_STAFF' || req.user?.role === 'OTHER_STAFF') {
+      res.status(403).json({ error: 'Access denied: Hospital staff cannot view confidential medication prescriptions.' });
+      return;
+    }
     const prescription = await prisma.prescription.findUnique({
       where: { id: req.params.id },
       include: {

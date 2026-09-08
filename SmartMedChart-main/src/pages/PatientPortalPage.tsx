@@ -7,7 +7,8 @@ import {
   Shield, Heart, Pill, AlertTriangle, Clock, CheckCircle2,
   Calendar, User, Activity, LogOut, QrCode, Stethoscope,
   Info, Sparkles, ChevronRight, FileText, Lock, X, RefreshCw,
-  Phone, PhoneCall, Edit2, Copy, Check, Users, ExternalLink
+  Phone, PhoneCall, Edit2, Copy, Check, Users, ExternalLink,
+  Building2
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { QRCodeSVG } from 'qrcode.react';
@@ -57,7 +58,7 @@ export default function PatientPortalPage() {
 
   const emergencyName = patient?.emergencyContactName || 'Sunita Patil';
   const emergencyRelation = patient?.emergencyContactRelation || 'Spouse / Primary Proxy';
-  const emergencyPhone = patient?.emergencyContactPhone || '+1 (555) 349-8291';
+  const emergencyPhone = patient?.emergencyContactPhone || '+91 98201 34982';
 
   const handleOpenContactModal = () => {
     setEditName(emergencyName);
@@ -183,7 +184,33 @@ export default function PatientPortalPage() {
           </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          {/* HOSPITAL STAFF PORTAL BUTTON (Beside Patients Portal) */}
+          <button
+            onClick={() => navigate('/staff-portal')}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+              padding: '7px 12px',
+              borderRadius: 8,
+              backgroundColor: '#f0fdf4',
+              border: '1px solid #bbf7d0',
+              color: '#15803d',
+              fontSize: 12,
+              fontWeight: 700,
+              cursor: 'pointer',
+              transition: 'all 0.15s ease'
+            }}
+            onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#dcfce7')}
+            onMouseOut={(e) => (e.currentTarget.style.backgroundColor = '#f0fdf4')}
+            title="Open Hospital Staff & Operations Hub"
+          >
+            <Building2 size={15} color="#16a34a" />
+            <span>Hospital Staff Portal</span>
+            <ExternalLink size={12} />
+          </button>
+
           <button
             onClick={() => setShowWristbandModal(true)}
             style={{
@@ -1392,7 +1419,7 @@ export default function PatientPortalPage() {
                     required
                     value={editPhone}
                     onChange={(e) => setEditPhone(e.target.value)}
-                    placeholder="+1 (555) 349-8291"
+                    placeholder="+91 98201 34982"
                     style={{
                       width: '100%',
                       padding: '9px 12px 9px 36px',

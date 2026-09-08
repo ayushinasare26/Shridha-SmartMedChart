@@ -39,6 +39,38 @@ export const getPatients = async (req: AuthRequest, res: Response, next: NextFun
       },
       orderBy: { name: 'asc' },
     });
+
+    // Enforce privacy for hospital staff (allied & support staff cannot see vitals or medical problems)
+    if (req.user?.role === 'ALLIED_STAFF' || req.user?.role === 'OTHER_STAFF') {
+      const sanitized = patients.map(p => ({
+        id: p.id,
+        name: p.name,
+        mrn: p.mrn,
+        bed: p.bed,
+        status: p.status,
+        ward: p.ward,
+        wardId: p.wardId,
+        attendingId: p.attendingId,
+        emergencyContactName: p.emergencyContactName,
+        emergencyContactRelation: p.emergencyContactRelation,
+        emergencyContactPhone: p.emergencyContactPhone,
+        // Conceal clinical problems, diagnoses, and vitals from hospital staff
+        admissionDiagnosis: null,
+        allergies: [],
+        prescriptions: [],
+        administrations: [],
+        eGFR: null,
+        creatinine: null,
+        bilirubin: null,
+        platelets: null,
+        codeStatus: null,
+        npoStatus: false,
+        isolationStatus: false,
+      }));
+      res.json(sanitized);
+      return;
+    }
+
     res.json(patients);
   } catch (error) { next(error); }
 };
@@ -58,12 +90,33 @@ export const searchPatients = async (req: AuthRequest, res: Response, next: Next
       include: { ward: true, allergies: true },
       take: 10,
     });
+
+    if (req.user?.role === 'ALLIED_STAFF' || req.user?.role === 'OTHER_STAFF') {
+      const sanitized = patients.map(p => ({
+        id: p.id,
+        name: p.name,
+        mrn: p.mrn,
+        bed: p.bed,
+        ward: p.ward,
+        admissionDiagnosis: null,
+        allergies: [],
+      }));
+      res.json(sanitized);
+      return;
+    }
+
     res.json(patients);
   } catch (error) { next(error); }
 };
 
 export const getPatient = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
+    // Prevent hospital staff from accessing confidential clinical medical charts, vitals, or diagnoses
+    if (req.user?.role === 'ALLIED_STAFF' || req.user?.role === 'OTHER_STAFF') {
+      res.status(403).json({ error: 'Access denied: Hospital staff cannot view confidential clinical charts, vitals, or medical problems.' });
+      return;
+    }
+
     const targetId = req.params.id === 'me' ? req.user?.id : req.params.id;
     if (!targetId) {
       res.status(400).json({ error: 'Patient ID required' });
