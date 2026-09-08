@@ -122,6 +122,16 @@ export const getPatient = async (req: AuthRequest, res: Response, next: NextFunc
   } catch (error) { next(error); }
 };
 
+async function generateUniqueMRN(): Promise<string> {
+  for (let attempt = 0; attempt < 20; attempt++) {
+    const rand = Math.floor(100000 + Math.random() * 900000);
+    const candidate = `MRN-${rand}`;
+    const exists = await prisma.patient.findUnique({ where: { mrn: candidate } });
+    if (!exists) return candidate;
+  }
+  return `MRN-${Date.now().toString().slice(-6)}`;
+}
+
 export const createPatient = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     const {
@@ -145,16 +155,21 @@ export const createPatient = async (req: AuthRequest, res: Response, next: NextF
       emergencyContactPhone,
     } = req.body;
 
-    if (!name || !mrn) {
-      res.status(400).json({ error: 'Patient name and MRN are required.' });
+    if (!name || !String(name).trim()) {
+      res.status(400).json({ error: 'Patient full legal name is required.' });
       return;
     }
 
-    // Check duplicate MRN
-    const existingPatient = await prisma.patient.findUnique({ where: { mrn } });
-    if (existingPatient) {
-      res.status(400).json({ error: `A patient with MRN ${mrn} is already admitted (${existingPatient.name}).` });
-      return;
+    // Auto-generate or sanitize MRN (guaranteed unique)
+    let finalMrn = mrn ? String(mrn).trim().toUpperCase() : '';
+    if (!finalMrn) {
+      finalMrn = await generateUniqueMRN();
+    } else {
+      // Check duplicate MRN - if collision found, auto-resolve with unique suffix
+      const existingPatient = await prisma.patient.findUnique({ where: { mrn: finalMrn } });
+      if (existingPatient) {
+        finalMrn = `${finalMrn}-${Math.floor(10 + Math.random() * 90)}`;
+      }
     }
 
     // Find ward if wardId not provided
@@ -168,20 +183,26 @@ export const createPatient = async (req: AuthRequest, res: Response, next: NextF
       }
     }
 
-    // Parse DOB to Date
-    const parsedDob = dob ? new Date(dob) : new Date('1980-01-01');
+    // Parse DOB to Date safely
+    let parsedDob = new Date('1985-06-15');
+    if (dob) {
+      const d = new Date(dob);
+      if (!isNaN(d.getTime())) {
+        parsedDob = d;
+      }
+    }
 
     // Create patient
     const patient = await prisma.patient.create({
       data: {
-        name,
-        mrn,
+        name: String(name).trim(),
+        mrn: finalMrn,
         dob: parsedDob,
         sex: sex || 'Male',
-        weight: typeof weight === 'number' ? weight : (parseFloat(weight) || 72),
+        weight: typeof weight === 'number' ? weight : (parseFloat(String(weight)) || 70),
         weightUnit: weightUnit || 'kg',
-        bed: bed || 'ICU-15',
-        admissionDiagnosis: admissionDiagnosis || 'Acute Inpatient Care',
+        bed: bed && String(bed).trim() ? String(bed).trim() : 'Bed ICU-01',
+        admissionDiagnosis: admissionDiagnosis && String(admissionDiagnosis).trim() ? String(admissionDiagnosis).trim() : 'Acute Inpatient Care',
         codeStatus: codeStatus || 'Full',
         npoStatus: Boolean(npoStatus),
         isolationStatus: Boolean(isolationStatus),

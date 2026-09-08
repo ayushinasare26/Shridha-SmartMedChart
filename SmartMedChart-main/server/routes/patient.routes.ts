@@ -9,10 +9,10 @@ router.use(authenticate as any);
 router.get('/', patientController.getPatients);
 router.get('/search', patientController.searchPatients);
 router.get('/:id', patientController.getPatient);
-router.post('/', authorize('DOCTOR', 'ADMIN') as any, patientController.createPatient);
+router.post('/', authorize('DOCTOR', 'ADMIN', 'NURSE') as any, patientController.createPatient);
 router.patch('/:id', authorize('DOCTOR', 'NURSE', 'ADMIN', 'PATIENT') as any, patientController.updatePatient);
 router.get('/:id/allergies', patientController.getPatientAllergies);
-router.post('/:id/allergies', authorize('DOCTOR', 'PHARMACIST') as any, patientController.addAllergy);
+router.post('/:id/allergies', authorize('DOCTOR', 'PHARMACIST', 'ADMIN', 'NURSE') as any, patientController.addAllergy);
 router.delete('/purge/all', authorize('ADMIN') as any, patientController.purgeAllPatients);
 router.delete('/:id', authorize('ADMIN', 'DOCTOR') as any, patientController.deletePatient);
 
