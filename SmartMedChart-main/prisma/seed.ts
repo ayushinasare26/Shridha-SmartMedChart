@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, UserRole, PatientStatus, PrescriptionStatus, ScheduleStatus, AlertSeverity, AlertType } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import { createHmac } from 'crypto';
 
@@ -67,11 +67,11 @@ async function main() {
   // ═══════════════ USERS & HOSPITAL PERSONNEL ═══════════════
   const passwordHash = await bcrypt.hash('SmartMed@2024', 12);
 
-  // 1. Dr. Evelyn Vance, MD — Lead Hospital Administrator
+  // 1. Dr. Shailaja Joshi, MD — Lead Hospital Administrator
   const adminVance = await prisma.user.create({
     data: {
-      email: 'evelyn.vance@metrohealth.org',
-      name: 'Dr. Evelyn Vance, MD',
+      email: 'shailaja.joshi@metrohealth.org',
+      name: 'Dr. Shailaja Joshi, MD',
       role: 'ADMIN',
       passwordHash,
       staffId: 'ADM-9001',
@@ -86,11 +86,11 @@ async function main() {
     },
   });
 
-  // 2. Arthur Hastings, MBA — Director of Hospital Operations
+  // 2. Rajesh Gupta, MBA — Director of Hospital Operations
   const adminHastings = await prisma.user.create({
     data: {
-      email: 'arthur.hastings@metrohealth.org',
-      name: 'Arthur Hastings, MBA',
+      email: 'rajesh.gupta@metrohealth.org',
+      name: 'Rajesh Gupta, MBA',
       role: 'ADMIN',
       passwordHash,
       staffId: 'ADM-1002',
@@ -105,11 +105,11 @@ async function main() {
     },
   });
 
-  // 3. Dr. Sarah Chen, MD — Consultant Physician
+  // 3. Dr. Ananya Iyer, MD — Consultant Physician
   const drChen = await prisma.user.create({
     data: {
-      email: 'sarah.chen@metrohealth.org',
-      name: 'Dr. Sarah Chen, MD',
+      email: 'ananya.iyer@metrohealth.org',
+      name: 'Dr. Ananya Iyer, MD',
       role: 'DOCTOR',
       passwordHash,
       staffId: 'DOC-84729',
@@ -117,18 +117,18 @@ async function main() {
       ward: 'Ward 4B ICU',
       department: 'Ward 4B - Internal Medicine',
       specialty: 'Internal Medicine & Geriatrics',
-      licenseNumber: 'MD-98729-CA',
+      licenseNumber: 'MD-98729-IN',
       shiftType: 'MORNING',
       onDuty: true,
       avatarUrl: 'https://images.unsplash.com/photo-1594824813515-5389f47021eb?w=150&auto=format&fit=crop&q=80',
     },
   });
 
-  // 4. Dr. Rohan Ross, MD — Senior Cardiologist
+  // 4. Dr. Rohan Mehra, MD — Senior Cardiologist
   const drRoss = await prisma.user.create({
     data: {
-      email: 'rohan.ross@metrohealth.org',
-      name: 'Dr. Rohan Ross, MD',
+      email: 'rohan.mehra@metrohealth.org',
+      name: 'Dr. Rohan Mehra, MD',
       role: 'DOCTOR',
       passwordHash,
       staffId: 'DOC-99120',
@@ -136,18 +136,18 @@ async function main() {
       ward: 'Cardiology CCU',
       department: 'Cardiology & General Medicine',
       specialty: 'Cardiology & Heart Failure',
-      licenseNumber: 'MD-99120-NY',
+      licenseNumber: 'MD-99120-IN',
       shiftType: 'ROTATING',
       onDuty: true,
       avatarUrl: 'https://images.unsplash.com/photo-1622253692010-333f2da6031d?w=150&auto=format&fit=crop&q=80',
     },
   });
 
-  // 5. Dr. Marcus Singh, MD — Lead General Surgeon
+  // 5. Dr. Vikram Singh, MD — Lead General Surgeon
   const drSingh = await prisma.user.create({
     data: {
-      email: 'marcus.singh@metrohealth.org',
-      name: 'Dr. Marcus Singh, MD',
+      email: 'vikram.singh@metrohealth.org',
+      name: 'Dr. Vikram Singh, MD',
       role: 'DOCTOR',
       passwordHash,
       staffId: 'DOC-51029',
@@ -155,7 +155,7 @@ async function main() {
       ward: 'Acute Surgery Unit 3A',
       department: 'Acute Surgery Unit 3A',
       specialty: 'Trauma & General Surgery',
-      licenseNumber: 'MD-51029-TX',
+      licenseNumber: 'MD-51029-IN',
       shiftType: 'ROTATING',
       onDuty: false,
       avatarUrl: 'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=150&auto=format&fit=crop&q=80',
@@ -174,18 +174,18 @@ async function main() {
       ward: 'Ward 4B ICU',
       department: 'ICU & Critical Care',
       specialty: 'Critical Care & Resuscitation',
-      licenseNumber: 'MD-23921-IL',
+      licenseNumber: 'MD-23921-IN',
       shiftType: 'NIGHT',
       onDuty: false,
       avatarUrl: 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=150&auto=format&fit=crop&q=80',
     },
   });
 
-  // 7. Sarah Jenkins, RN — Staff Registered Nurse
+  // 7. Nurse Kavita Nair, RN — Staff Registered Nurse
   const nurseJenkins = await prisma.user.create({
     data: {
-      email: 'sarah.jenkins@metrohealth.org',
-      name: 'Sarah Jenkins, RN',
+      email: 'kavita.nair@metrohealth.org',
+      name: 'Nurse Kavita Nair, RN',
       role: 'NURSE',
       passwordHash,
       staffId: 'RN-55219',
@@ -193,18 +193,18 @@ async function main() {
       ward: 'Ward 4B (Acute Medicine)',
       department: 'Ward 4B (Acute Medicine)',
       specialty: 'Acute Inpatient Care & eMAR Administration',
-      licenseNumber: 'RN-55219-UK',
+      licenseNumber: 'RN-55219-IN',
       shiftType: 'MORNING',
       onDuty: true,
       avatarUrl: 'https://images.unsplash.com/photo-1582750433449-648ed127bb54?w=150&auto=format&fit=crop&q=80',
     },
   });
 
-  // 8. Marcus Brody, RN — Ward Charge Nurse / Shift Lead
+  // 8. Nurse Suresh Verma, RN — Ward Charge Nurse / Shift Lead
   const nurseBrody = await prisma.user.create({
     data: {
-      email: 'marcus.brody@metrohealth.org',
-      name: 'Marcus Brody, RN',
+      email: 'suresh.verma@metrohealth.org',
+      name: 'Nurse Suresh Verma, RN',
       role: 'NURSE',
       passwordHash,
       staffId: 'CN-40192',
@@ -212,7 +212,7 @@ async function main() {
       ward: 'Ward 4B (Acute Medicine)',
       department: 'Ward 4B (Acute Medicine)',
       specialty: 'Ward Resource Management & Medication Safety',
-      licenseNumber: 'RN-40192-US',
+      licenseNumber: 'RN-40192-IN',
       shiftType: 'MORNING',
       onDuty: true,
       avatarUrl: 'https://images.unsplash.com/photo-1537368910025-700350fe46c7?w=150&auto=format&fit=crop&q=80',
@@ -231,18 +231,18 @@ async function main() {
       ward: 'Clinical Pharmacy Services',
       department: 'Clinical Pharmacy Services',
       specialty: 'Pharmacotherapy & Drug Interaction Triage',
-      licenseNumber: 'RPH-31405-GB',
+      licenseNumber: 'RPH-31405-IN',
       shiftType: 'MORNING',
       onDuty: true,
       avatarUrl: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80',
     },
   });
 
-  // 10. David Kim, MLS — Senior Medical Lab Technologist
+  // 10. Arjun Mehta, MLS — Senior Medical Lab Technologist
   const techKim = await prisma.user.create({
     data: {
-      email: 'david.kim@metrohealth.org',
-      name: 'David Kim, MLS',
+      email: 'arjun.mehta@metrohealth.org',
+      name: 'Arjun Mehta, MLS',
       role: 'ALLIED_STAFF',
       passwordHash,
       staffId: 'LT-44201',
@@ -250,18 +250,18 @@ async function main() {
       ward: 'Central Pathology & Blood Bank',
       department: 'Central Pathology & Blood Bank',
       specialty: 'Diagnostic Hematology & Cross-matching',
-      licenseNumber: 'MLS-44201-ASCP',
+      licenseNumber: 'MLS-44201-AIIMS',
       shiftType: 'MORNING',
       onDuty: true,
       avatarUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
     },
   });
 
-  // 11. Elena Rostova, RT(R) — Lead Radiologic Technologist
+  // 11. Pooja Sharma, RT(R) — Lead Radiologic Technologist
   const techRostova = await prisma.user.create({
     data: {
-      email: 'elena.rostova@metrohealth.org',
-      name: 'Elena Rostova, RT(R)',
+      email: 'pooja.sharma@metrohealth.org',
+      name: 'Pooja Sharma, RT(R)',
       role: 'ALLIED_STAFF',
       passwordHash,
       staffId: 'RT-55102',
@@ -269,7 +269,7 @@ async function main() {
       ward: 'Diagnostic Radiology & CT Imaging',
       department: 'Diagnostic Radiology & CT Imaging',
       specialty: 'Bedside Mobile X-Ray & CT Imaging',
-      licenseNumber: 'ARRT-55102',
+      licenseNumber: 'ARRT-55102-IN',
       shiftType: 'MORNING',
       onDuty: false,
       avatarUrl: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=150&auto=format&fit=crop&q=80',
@@ -295,11 +295,11 @@ async function main() {
     },
   });
 
-  // 13. Nurse Priya, RN — Primary Bedside BSN
+  // 13. Nurse Priya Nair, RN — Primary Bedside BSN
   const nursePriya = await prisma.user.create({
     data: {
       email: 'priya.rn@metrohealth.org',
-      name: 'Nurse Priya, RN',
+      name: 'Nurse Priya Nair, RN',
       role: 'NURSE',
       passwordHash,
       staffId: 'RN-8821',
@@ -307,18 +307,18 @@ async function main() {
       ward: 'Ward 4B ICU',
       department: 'ICU Ward 4B Primary',
       specialty: 'Critical Care eMAR Administration',
-      licenseNumber: 'RN-8821-NY',
+      licenseNumber: 'RN-8821-IN',
       shiftType: 'MORNING',
       onDuty: true,
       avatarUrl: 'https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?w=150&auto=format&fit=crop&q=80',
     },
   });
 
-  // 14. Pharm. Dave P., PharmD — Clinical Pharmacist
+  // 14. Pharm. Devendra Kulkarni, PharmD — Clinical Pharmacist
   const pharmDave = await prisma.user.create({
     data: {
-      email: 'dave.pharm@metrohealth.org',
-      name: 'Pharm. Dave P., PharmD',
+      email: 'devendra.pharm@metrohealth.org',
+      name: 'Pharm. Devendra Kulkarni, PharmD',
       role: 'PHARMACIST',
       passwordHash,
       staffId: 'PH-2201',
@@ -326,18 +326,18 @@ async function main() {
       ward: 'Ward 4B ICU',
       department: 'Clinical Pharmacy',
       specialty: 'High-Alert Med Verification & Infusion Safety',
-      licenseNumber: 'RPH-2201-CA',
+      licenseNumber: 'RPH-2201-IN',
       shiftType: 'MORNING',
       onDuty: true,
       avatarUrl: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80',
     },
   });
 
-  // 15. Admin Elena — Ward Supervisor
+  // 15. Admin Rajesh Gupta — Ward Operations Supervisor
   const adminElena = await prisma.user.create({
     data: {
-      email: 'elena.admin@metrohealth.org',
-      name: 'Admin Elena',
+      email: 'rajesh.admin@metrohealth.org',
+      name: 'Admin Rajesh Gupta',
       role: 'ADMIN',
       passwordHash,
       staffId: 'ADM-0001',
@@ -345,7 +345,7 @@ async function main() {
       ward: 'Ward 4B ICU',
       department: 'Ward Administration',
       specialty: 'Inpatient Scheduling & Bed Tracking',
-      licenseNumber: 'ADM-0001-IL',
+      licenseNumber: 'ADM-0001-IN',
       shiftType: 'MORNING',
       onDuty: true,
       avatarUrl: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&auto=format&fit=crop&q=80',
@@ -376,7 +376,7 @@ async function main() {
       platelets: 194,
       emergencyContactName: 'Sunita Patil',
       emergencyContactRelation: 'Spouse / Primary Proxy',
-      emergencyContactPhone: '+91 94123 45678',
+      emergencyContactPhone: '+91 98201 34982',
     },
   });
 
@@ -398,35 +398,35 @@ async function main() {
       creatinine: 1.8,
       emergencyContactName: 'Vikram Desai',
       emergencyContactRelation: 'Son',
-      emergencyContactPhone: '+91 98234 11204',
+      emergencyContactPhone: '+91 98765 78290',
     },
   });
 
   const georgeMatthews = await prisma.patient.create({
     data: {
       mrn: '94023-08',
-      name: 'Rajesh Sharma',
+      name: 'Girish Madhavan',
       dob: new Date('1965-11-05'),
       sex: 'Male',
       weight: 89.2,
       wardId: ward4B.id,
       bed: 'ICU-08',
       attendingId: drSharma.id,
-      admissionDiagnosis: 'Post-op Bowel Resection, Anastomotic Leak Monitoring',
+      admissionDiagnosis: 'Post-op Bowel Resection, Anastomotic Leak',
       npoStatus: true,
       codeStatus: 'Full',
       status: 'ACTIVE',
       eGFR: 78,
-      emergencyContactName: 'Pooja Sharma',
+      emergencyContactName: 'Sowmya Madhavan',
       emergencyContactRelation: 'Spouse',
-      emergencyContactPhone: '+91 98112 34567',
+      emergencyContactPhone: '+91 98450 41268',
     },
   });
 
   const mrsBrown = await prisma.patient.create({
     data: {
       mrn: '94024-03',
-      name: 'Meera Iyer',
+      name: 'Meenakshi Sundaram',
       dob: new Date('1942-07-18'),
       sex: 'Female',
       weight: 62.5,
@@ -435,12 +435,12 @@ async function main() {
       attendingId: drChen.id,
       admissionDiagnosis: 'COPD Exacerbation with Respiratory Failure',
       npoStatus: false,
-      codeStatus: 'Full',
+      codeStatus: 'DNR/DNI',
       status: 'ACTIVE',
       eGFR: 35,
-      emergencyContactName: 'Karthik Iyer',
+      emergencyContactName: 'Devanand Sundaram',
       emergencyContactRelation: 'Son / Power of Attorney',
-      emergencyContactPhone: '+91 98401 23456',
+      emergencyContactPhone: '+91 98110 90324',
     },
   });
 

@@ -5,7 +5,7 @@ interface User {
   id: string;
   email: string;
   name: string;
-  role: 'DOCTOR' | 'NURSE' | 'PHARMACIST' | 'ADMIN' | 'PATIENT' | 'OTHER_STAFF';
+  role: 'DOCTOR' | 'NURSE' | 'PHARMACIST' | 'ADMIN' | 'PATIENT' | 'OTHER_STAFF' | 'ALLIED_STAFF';
   staffId?: string;
   patientId?: string;
   mrn?: string;

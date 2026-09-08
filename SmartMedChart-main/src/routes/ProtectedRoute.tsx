@@ -15,6 +15,12 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
   }
 
   if (allowedRoles && user && !allowedRoles.includes(user.role)) {
+    if (user.role === 'ALLIED_STAFF' || user.role === 'OTHER_STAFF') {
+      return <Navigate to="/staff-portal" replace />;
+    }
+    if (user.role === 'PATIENT') {
+      return <Navigate to="/patient-portal" replace />;
+    }
     return <Navigate to="/unauthorized" replace />;
   }
 

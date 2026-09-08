@@ -17,6 +17,11 @@ const scheduleInclude = {
 
 export const getSchedules = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
+    if (req.user?.role === 'ALLIED_STAFF' || req.user?.role === 'OTHER_STAFF') {
+      res.status(403).json({ error: 'Access denied: Hospital staff cannot view medication administration schedules.' });
+      return;
+    }
+
     const { patientId, status, date } = req.query;
     const targetDate = date ? new Date(date as string) : new Date();
     const startOfDay = new Date(targetDate); startOfDay.setHours(0, 0, 0, 0);
@@ -66,6 +71,11 @@ export const getSchedules = async (req: AuthRequest, res: Response, next: NextFu
 
 export const getWardSchedule = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
+    if (req.user?.role === 'ALLIED_STAFF' || req.user?.role === 'OTHER_STAFF') {
+      res.status(403).json({ error: 'Access denied: Hospital staff cannot view ward medication schedules.' });
+      return;
+    }
+
     const { ward, date, shift } = req.query;
     const targetDate = date ? new Date(date as string) : new Date();
     const startOfDay = new Date(targetDate); startOfDay.setHours(0, 0, 0, 0);
@@ -88,6 +98,10 @@ export const getWardSchedule = async (req: AuthRequest, res: Response, next: Nex
 
 export const getSchedule = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
+    if (req.user?.role === 'ALLIED_STAFF' || req.user?.role === 'OTHER_STAFF') {
+      res.status(403).json({ error: 'Access denied: Hospital staff cannot view medication administration schedules.' });
+      return;
+    }
     const schedule = await prisma.medicationSchedule.findUnique({
       where: { id: req.params.id },
       include: scheduleInclude,

@@ -3,7 +3,7 @@ import { useAuth } from '../hooks/useAuth';
 import {
   LayoutDashboard, Users, FileText, Scan, Shield,
   LogOut, ChevronRight, Bell, Activity, BarChart2,
-  Settings, Pill, QrCode
+  Settings, Pill, QrCode, Building2, Heart
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { notificationService } from '../services/api.services';
@@ -162,6 +162,27 @@ export function Sidebar() {
             )}
           </NavLink>
         ))}
+
+        <div style={{ margin: '12px 14px 6px', paddingTop: 10, borderTop: '1px solid var(--color-border)', fontSize: 10, fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+          Hospital Portals
+        </div>
+        <NavLink
+          to="/staff-portal"
+          className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}
+        >
+          <Building2 size={15} color="#0284c7" />
+          <span style={{ flex: 1, fontSize: 12 }}>Hospital Staff Portal</span>
+          <span style={{ background: 'rgba(2, 132, 199, 0.12)', color: '#0284c7', fontSize: 9, fontWeight: 700, padding: '1px 5px', borderRadius: 4 }}>
+            Allied
+          </span>
+        </NavLink>
+        <NavLink
+          to="/patient-portal"
+          className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}
+        >
+          <Heart size={15} color="#ef4444" />
+          <span style={{ flex: 1, fontSize: 12 }}>Patients Portal</span>
+        </NavLink>
       </nav>
 
       {/* Ward Status */}

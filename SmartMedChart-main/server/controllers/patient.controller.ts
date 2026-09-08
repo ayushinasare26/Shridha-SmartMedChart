@@ -5,12 +5,11 @@ import { createAuditLog } from '../utils/audit';
 
 export const getPatients = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { ward, status, search, attendingId } = req.query;
+    const { ward, status, search } = req.query;
     const patients = await prisma.patient.findMany({
       where: {
         ...(ward && { ward: { unit: ward as string } }),
         ...(status && { status: status as any }),
-        ...(attendingId && { attendingId: attendingId as string }),
         ...(search && {
           OR: [
             { name: { contains: search as string, mode: 'insensitive' } },
@@ -37,29 +36,42 @@ export const getPatients = async (req: AuthRequest, res: Response, next: NextFun
             },
           },
         },
-        clinicalNotes: {
-          take: 3,
-          orderBy: { createdAt: 'desc' },
-          include: { author: { select: { name: true, role: true } } },
-        },
       },
       orderBy: { name: 'asc' },
     });
 
-    // Populate attending doctor details
-    const doctorIds = Array.from(new Set(patients.map(p => p.attendingId).filter(Boolean))) as string[];
-    const doctors = doctorIds.length > 0 ? await prisma.user.findMany({
-      where: { id: { in: doctorIds } },
-      select: { id: true, name: true, role: true, specialty: true, title: true },
-    }) : [];
-    const docMap = new Map(doctors.map(d => [d.id, d]));
+    // Enforce privacy for hospital staff (allied & support staff cannot see vitals or medical problems)
+    if (req.user?.role === 'ALLIED_STAFF' || req.user?.role === 'OTHER_STAFF') {
+      const sanitized = patients.map(p => ({
+        id: p.id,
+        name: p.name,
+        mrn: p.mrn,
+        bed: p.bed,
+        status: p.status,
+        ward: p.ward,
+        wardId: p.wardId,
+        attendingId: p.attendingId,
+        emergencyContactName: p.emergencyContactName,
+        emergencyContactRelation: p.emergencyContactRelation,
+        emergencyContactPhone: p.emergencyContactPhone,
+        // Conceal clinical problems, diagnoses, and vitals from hospital staff
+        admissionDiagnosis: null,
+        allergies: [],
+        prescriptions: [],
+        administrations: [],
+        eGFR: null,
+        creatinine: null,
+        bilirubin: null,
+        platelets: null,
+        codeStatus: null,
+        npoStatus: false,
+        isolationStatus: false,
+      }));
+      res.json(sanitized);
+      return;
+    }
 
-    const enrichedPatients = patients.map(p => ({
-      ...p,
-      attending: p.attendingId ? docMap.get(p.attendingId) || null : null,
-    }));
-
-    res.json(enrichedPatients);
+    res.json(patients);
   } catch (error) { next(error); }
 };
 
@@ -78,12 +90,33 @@ export const searchPatients = async (req: AuthRequest, res: Response, next: Next
       include: { ward: true, allergies: true },
       take: 10,
     });
+
+    if (req.user?.role === 'ALLIED_STAFF' || req.user?.role === 'OTHER_STAFF') {
+      const sanitized = patients.map(p => ({
+        id: p.id,
+        name: p.name,
+        mrn: p.mrn,
+        bed: p.bed,
+        ward: p.ward,
+        admissionDiagnosis: null,
+        allergies: [],
+      }));
+      res.json(sanitized);
+      return;
+    }
+
     res.json(patients);
   } catch (error) { next(error); }
 };
 
 export const getPatient = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
+    // Prevent hospital staff from accessing confidential clinical medical charts, vitals, or diagnoses
+    if (req.user?.role === 'ALLIED_STAFF' || req.user?.role === 'OTHER_STAFF') {
+      res.status(403).json({ error: 'Access denied: Hospital staff cannot view confidential clinical charts, vitals, or medical problems.' });
+      return;
+    }
+
     const targetId = req.params.id === 'me' ? req.user?.id : req.params.id;
     if (!targetId) {
       res.status(400).json({ error: 'Patient ID required' });
@@ -131,13 +164,6 @@ export const getPatient = async (req: AuthRequest, res: Response, next: NextFunc
           orderBy: { signedAt: 'desc' },
           take: 20,
         },
-        clinicalNotes: {
-          include: {
-            author: { select: { id: true, name: true, role: true, staffId: true, title: true } },
-            acknowledgedBy: { select: { id: true, name: true, role: true, staffId: true } },
-          },
-          orderBy: { createdAt: 'desc' },
-        },
         safetyAlerts: {
           where: { isResolved: false },
           orderBy: { createdAt: 'desc' },
@@ -145,16 +171,7 @@ export const getPatient = async (req: AuthRequest, res: Response, next: NextFunc
       },
     });
     if (!patient) { res.status(404).json({ error: 'Patient not found' }); return; }
-
-    let attending = null;
-    if (patient.attendingId) {
-      attending = await prisma.user.findUnique({
-        where: { id: patient.attendingId },
-        select: { id: true, name: true, role: true, specialty: true, title: true, staffId: true },
-      });
-    }
-
-    res.json({ ...patient, attending });
+    res.json(patient);
   } catch (error) { next(error); }
 };
 

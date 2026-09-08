@@ -1,6 +1,7 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import jsQR from 'jsqr';
 import { userService, patientService } from '../services/api.services';
 import { useAuth } from '../hooks/useAuth';
 import {
@@ -9,7 +10,7 @@ import {
   ExternalLink, LogOut, Check, X, AlertCircle, RefreshCw,
   QrCode, UserPlus, FileText, ChevronRight, Activity, Building2,
   SlidersHorizontal, HeartPulse, Pill, FlaskConical, Eye,
-  Heart, Bed, AlertTriangle, Users, Camera, Scan
+  Heart, Bed, AlertTriangle, Users, Camera, CameraOff, Scan
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { QRCodeSVG } from 'qrcode.react';
@@ -185,23 +186,191 @@ export default function AdminPage() {
     }
   });
 
+  // Camera scanning state in Admin Scanner Modal
+  const adminVideoRef = useRef<HTMLVideoElement>(null);
+  const adminCanvasRef = useRef<HTMLCanvasElement>(null);
+  const adminMediaStreamRef = useRef<MediaStream | null>(null);
+  const adminScanIntervalRef = useRef<number | null>(null);
+  const [adminCameraActive, setAdminCameraActive] = useState(false);
+  const [adminCameraLoading, setAdminCameraLoading] = useState(false);
+  const [adminCameraError, setAdminCameraError] = useState<string | null>(null);
+
+  const stopAdminCamera = useCallback(() => {
+    if (adminMediaStreamRef.current) {
+      adminMediaStreamRef.current.getTracks().forEach(t => t.stop());
+      adminMediaStreamRef.current = null;
+    }
+    if (adminVideoRef.current) {
+      adminVideoRef.current.srcObject = null;
+    }
+    if (adminScanIntervalRef.current) {
+      clearInterval(adminScanIntervalRef.current);
+      adminScanIntervalRef.current = null;
+    }
+    setAdminCameraActive(false);
+  }, []);
+
+  const startAdminCamera = useCallback(async () => {
+    setAdminCameraLoading(true);
+    setAdminCameraError(null);
+
+    if (adminMediaStreamRef.current) {
+      adminMediaStreamRef.current.getTracks().forEach(t => t.stop());
+      adminMediaStreamRef.current = null;
+    }
+
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      setAdminCameraError('Camera access not supported by this browser.');
+      setAdminCameraLoading(false);
+      return;
+    }
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: 'environment' }, width: { ideal: 640 }, height: { ideal: 640 } },
+        audio: false
+      });
+      adminMediaStreamRef.current = stream;
+      if (adminVideoRef.current) {
+        adminVideoRef.current.srcObject = stream;
+        adminVideoRef.current.setAttribute('playsinline', 'true');
+        await adminVideoRef.current.play().catch(() => {});
+      }
+      setAdminCameraActive(true);
+      setAdminCameraLoading(false);
+    } catch {
+      try {
+        const fallbackStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+        adminMediaStreamRef.current = fallbackStream;
+        if (adminVideoRef.current) {
+          adminVideoRef.current.srcObject = fallbackStream;
+          adminVideoRef.current.setAttribute('playsinline', 'true');
+          await adminVideoRef.current.play().catch(() => {});
+        }
+        setAdminCameraActive(true);
+        setAdminCameraLoading(false);
+      } catch (err: any) {
+        setAdminCameraError(err.name === 'NotAllowedError' ? 'Camera permission was denied in browser.' : 'No camera device detected.');
+        setAdminCameraLoading(false);
+        setAdminCameraActive(false);
+      }
+    }
+  }, []);
+
   const handlePerformScan = (code: string) => {
-    const q = code.trim().toLowerCase();
+    let q = code.trim().toLowerCase();
     if (!q) return;
+
+    if (q.includes('id=')) {
+      try {
+        const urlParams = new URLSearchParams(q.split('?')[1]);
+        const idParam = urlParams.get('id');
+        if (idParam) q = idParam.toLowerCase();
+      } catch { /* ignore */ }
+    } else if (q.includes('/verify/')) {
+      const parts = q.split('/verify/');
+      if (parts[1]) q = parts[1].split('?')[0].split('/')[0].toLowerCase();
+    }
+    if (q.startsWith('{') && q.endsWith('}')) {
+      try {
+        const parsed = JSON.parse(code);
+        q = (parsed.staffId || parsed.mrn || parsed.id || q).toLowerCase();
+      } catch { /* ignore */ }
+    }
+
     const s = staffList.find(u => u.staffId?.toLowerCase() === q || u.id.toLowerCase() === q || u.name?.toLowerCase().includes(q));
     if (s) {
+      stopAdminCamera();
       setShowScannerModal(false);
       setShortInfoRecord({ type: 'STAFF', data: s });
       return;
     }
     const p = patientsList.find(pt => pt.mrn?.toLowerCase() === q || pt.id.toLowerCase() === q || pt.name?.toLowerCase().includes(q) || (pt.bed && pt.bed.toLowerCase().includes(q)));
     if (p) {
+      stopAdminCamera();
       setShowScannerModal(false);
       setShortInfoRecord({ type: 'PATIENT', data: p });
       return;
     }
     alert(`No matching hospital staff badge or admitted patient MRN found for: "${code}"`);
   };
+
+  // Camera lifecycle for Admin scanner modal
+  useEffect(() => {
+    if (showScannerModal) {
+      startAdminCamera();
+    } else {
+      stopAdminCamera();
+    }
+    return () => {
+      stopAdminCamera();
+    };
+  }, [showScannerModal, startAdminCamera, stopAdminCamera]);
+
+  // Frame processing loop for Admin scanner
+  useEffect(() => {
+    if (!showScannerModal || !adminCameraActive) {
+      if (adminScanIntervalRef.current) {
+        clearInterval(adminScanIntervalRef.current);
+        adminScanIntervalRef.current = null;
+      }
+      return;
+    }
+
+    let isScanningFrame = false;
+    const scanFrame = async () => {
+      if (isScanningFrame) return;
+      if (!adminVideoRef.current || adminVideoRef.current.readyState < 2) return;
+
+      const video = adminVideoRef.current;
+      const width = video.videoWidth;
+      const height = video.videoHeight;
+      if (!width || !height) return;
+
+      isScanningFrame = true;
+      try {
+        if ('BarcodeDetector' in window) {
+          try {
+            const detector = new (window as any).BarcodeDetector({ formats: ['qr_code', 'code_128', 'ean_13'] });
+            const barcodes = await detector.detect(video);
+            if (barcodes && barcodes.length > 0) {
+              const val = barcodes[0].rawValue;
+              if (val && val.trim()) {
+                handlePerformScan(val.trim());
+                return;
+              }
+            }
+          } catch { /* ignore */ }
+        }
+
+        const canvas = adminCanvasRef.current || document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+        if (ctx) {
+          ctx.drawImage(video, 0, 0, width, height);
+          const imgData = ctx.getImageData(0, 0, width, height);
+          const res = jsQR(imgData.data, imgData.width, imgData.height, { inversionAttempts: 'dontInvert' });
+          if (res && res.data && res.data.trim()) {
+            handlePerformScan(res.data.trim());
+            return;
+          }
+        }
+      } catch {
+        /* frame error */
+      } finally {
+        isScanningFrame = false;
+      }
+    };
+
+    adminScanIntervalRef.current = window.setInterval(scanFrame, 120);
+    return () => {
+      if (adminScanIntervalRef.current) {
+        clearInterval(adminScanIntervalRef.current);
+        adminScanIntervalRef.current = null;
+      }
+    };
+  }, [showScannerModal, adminCameraActive, staffList, patientsList]);
 
   // Auto-open enroll modal if ?enroll=true in URL
   useEffect(() => {
@@ -1645,36 +1814,100 @@ export default function AdminPage() {
             </div>
 
             <div style={{ padding: '24px 24px 20px', textAlign: 'center' }}>
-              {/* Animated Optical Scanner Viewfinder */}
+              {/* Live Optical Scanner Viewfinder */}
               <div style={{
                 position: 'relative',
-                width: 200,
-                height: 200,
-                margin: '0 auto 20px',
+                width: 220,
+                height: 220,
+                margin: '0 auto 16px',
                 backgroundColor: '#0f172a',
                 borderRadius: 16,
                 overflow: 'hidden',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                border: '2px solid #38bdf8',
-                boxShadow: '0 0 20px rgba(56, 189, 248, 0.2)'
+                border: adminCameraActive && !adminCameraLoading ? '2.5px solid #38bdf8' : '2px solid #38bdf8',
+                boxShadow: '0 0 20px rgba(56, 189, 248, 0.25)'
               }}>
-                <div style={{ position: 'absolute', top: 10, left: 10, width: 20, height: 20, borderTop: '3px solid #38bdf8', borderLeft: '3px solid #38bdf8' }} />
-                <div style={{ position: 'absolute', top: 10, right: 10, width: 20, height: 20, borderTop: '3px solid #38bdf8', borderRight: '3px solid #38bdf8' }} />
-                <div style={{ position: 'absolute', bottom: 10, left: 10, width: 20, height: 20, borderBottom: '3px solid #38bdf8', borderLeft: '3px solid #38bdf8' }} />
-                <div style={{ position: 'absolute', bottom: 10, right: 10, width: 20, height: 20, borderBottom: '3px solid #38bdf8', borderRight: '3px solid #38bdf8' }} />
+                <video
+                  ref={adminVideoRef}
+                  autoPlay
+                  playsInline
+                  muted
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'cover',
+                    opacity: adminCameraActive && !adminCameraLoading ? 1 : 0
+                  }}
+                />
+                <canvas ref={adminCanvasRef} style={{ display: 'none' }} />
 
-                <QrCode size={80} color="rgba(255,255,255,0.2)" />
+                <div style={{ position: 'absolute', top: 10, left: 10, width: 20, height: 20, borderTop: '3px solid #38bdf8', borderLeft: '3px solid #38bdf8', zIndex: 12 }} />
+                <div style={{ position: 'absolute', top: 10, right: 10, width: 20, height: 20, borderTop: '3px solid #38bdf8', borderRight: '3px solid #38bdf8', zIndex: 12 }} />
+                <div style={{ position: 'absolute', bottom: 10, left: 10, width: 20, height: 20, borderBottom: '3px solid #38bdf8', borderLeft: '3px solid #38bdf8', zIndex: 12 }} />
+                <div style={{ position: 'absolute', bottom: 10, right: 10, width: 20, height: 20, borderBottom: '3px solid #38bdf8', borderRight: '3px solid #38bdf8', zIndex: 12 }} />
+
+                {adminCameraLoading && (
+                  <div style={{ zIndex: 14, color: '#38bdf8', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+                    <RefreshCw size={28} style={{ animation: 'spin 1s linear infinite' }} />
+                    <span style={{ fontSize: 10, fontWeight: 700 }}>Starting Camera...</span>
+                  </div>
+                )}
+
+                {!adminCameraLoading && !adminCameraActive && (
+                  <div style={{ zIndex: 14, color: '#94a3b8', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: 12 }}>
+                    <CameraOff size={32} color="#f87171" style={{ marginBottom: 6 }} />
+                    <span style={{ fontSize: 10, color: '#cbd5e1' }}>{adminCameraError || 'Camera unavailable'}</span>
+                    <button
+                      type="button"
+                      onClick={startAdminCamera}
+                      style={{ marginTop: 8, padding: '4px 10px', fontSize: 10, borderRadius: 6, backgroundColor: '#0284c7', color: '#fff', border: 'none', cursor: 'pointer' }}
+                    >
+                      Retry Camera
+                    </button>
+                  </div>
+                )}
+
+                {adminCameraActive && !adminCameraLoading && (
+                  <>
+                    <div style={{
+                      position: 'absolute',
+                      width: 130,
+                      height: 130,
+                      borderRadius: 12,
+                      border: '2px dashed rgba(56, 189, 248, 0.7)',
+                      zIndex: 13,
+                      pointerEvents: 'none'
+                    }} />
+                    <div style={{
+                      position: 'absolute',
+                      left: 0,
+                      right: 0,
+                      height: 2,
+                      background: 'linear-gradient(90deg, transparent, #38bdf8, transparent)',
+                      boxShadow: '0 0 12px 3px rgba(56, 189, 248, 0.8)',
+                      animation: 'scannerLaserLight 2s ease-in-out infinite',
+                      zIndex: 14,
+                      pointerEvents: 'none'
+                    }} />
+                  </>
+                )}
+
                 <div style={{
                   position: 'absolute',
-                  bottom: 12,
-                  fontSize: 10,
-                  fontWeight: 700,
-                  color: '#38bdf8',
-                  letterSpacing: '0.06em'
+                  bottom: 8,
+                  fontSize: 9,
+                  fontWeight: 800,
+                  color: '#ffffff',
+                  letterSpacing: '0.06em',
+                  zIndex: 15,
+                  textShadow: '0 1px 3px rgba(0,0,0,0.8)'
                 }}>
-                  OPTICAL SCANNER READY
+                  {adminCameraActive && !adminCameraLoading ? 'ALIGN QR CODE' : 'OPTICAL SCANNER READY'}
                 </div>
               </div>
 

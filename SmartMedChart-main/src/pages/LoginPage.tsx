@@ -26,17 +26,64 @@ const ADMIN_PRESETS = [
 ];
 
 const CLINICAL_PRESETS = [
-  { name: 'Dr. Sharma, MD', role: 'Attending Intensivist', email: 'sharma.md@metrohealth.org', staffId: 'DOC-84729', color: '#2563eb', initials: 'DS' },
-  { name: 'Nurse Priya, RN', role: 'Primary Bedside BSN', email: 'priya.rn@metrohealth.org', staffId: 'RN-88219', color: '#059669', initials: 'NP' },
-  { name: 'Pharm. Dave', role: 'Clinical Pharmacist', email: 'dave.pharm@metrohealth.org', staffId: 'PH-31405', color: '#7c3aed', initials: 'PD' },
-  { name: 'Admin Elena', role: 'Ward Supervisor', email: 'elena.admin@metrohealth.org', staffId: 'ADM-2001', color: '#d97706', initials: 'AE' },
+  { name: 'Dr. V. Sharma, MD', role: 'Attending Intensivist', email: 'sharma.md@metrohealth.org', staffId: 'DR-4001', color: '#2563eb', initials: 'DS' },
+  { name: 'Nurse Priya Nair, RN', role: 'Primary Bedside BSN', email: 'priya.rn@metrohealth.org', staffId: 'RN-88219', color: '#059669', initials: 'PN' },
+  { name: 'Priya Patel, BPharm', role: 'Clinical Pharmacist', email: 'priya.pharm@metrohealth.org', staffId: 'PH-31405', color: '#7c3aed', initials: 'PP' },
+  { name: 'Admin Rajesh Gupta', role: 'Ward Supervisor', email: 'rajesh.admin@metrohealth.org', staffId: 'ADM-2001', color: '#d97706', initials: 'RG' },
 ];
 
 const PATIENT_PRESETS = [
   { name: 'Rahul Patil', mrn: '94021-08', bed: 'Bed ICU-12', diagnosis: 'Septic Shock', pin: '1234', initials: 'RP', color: '#0b4da2' },
   { name: 'Anita Desai', mrn: '94022-15', bed: 'Bed ICU-14', diagnosis: 'Type 2 Diabetes', pin: '1234', initials: 'AD', color: '#0284c7' },
-  { name: 'Rajesh Sharma', mrn: '94023-08', bed: 'Bed ICU-08', diagnosis: 'Post-op Bowel Resection', pin: '1234', initials: 'RS', color: '#0d9488' },
-  { name: 'Meera Iyer', mrn: '94024-03', bed: 'Bed ICU-03', diagnosis: 'COPD Exacerbation', pin: '1234', initials: 'MI', color: '#7c3aed' },
+  { name: 'Girish Madhavan', mrn: '94023-08', bed: 'Bed ICU-08', diagnosis: 'Post-op Bowel Resection', pin: '1234', initials: 'GM', color: '#0d9488' },
+  { name: 'Meenakshi Sundaram', mrn: '94024-03', bed: 'Bed ICU-03', diagnosis: 'COPD Exacerbation', pin: '1234', initials: 'MS', color: '#7c3aed' },
+];
+
+const STAFF_PRESETS = [
+  {
+    name: 'Arjun Mehta, MLS',
+    role: 'Senior Medical Laboratory Scientist',
+    staffId: 'LT-44201',
+    department: 'Central Pathology & Blood Bank',
+    email: 'arjun.mehta@metrohealth.org',
+    pin: '1234',
+    color: '#7c3aed',
+    initials: 'AM',
+    badge: 'LAB & BLOOD BANK'
+  },
+  {
+    name: 'Pooja Sharma, RT(R)',
+    role: 'Lead Radiologic Technologist',
+    staffId: 'RT-55102',
+    department: 'Diagnostic Radiology & CT Imaging',
+    email: 'pooja.sharma@metrohealth.org',
+    pin: '1234',
+    color: '#0891b2',
+    initials: 'PS',
+    badge: 'IMAGING & RADIOLOGY'
+  },
+  {
+    name: 'Nurse Suresh Verma, RN',
+    role: 'Ward Care Coordinator & Triage',
+    staffId: 'CN-40192',
+    department: 'Ward 4B Acute Operations',
+    email: 'suresh.verma@metrohealth.org',
+    pin: '1234',
+    color: '#059669',
+    initials: 'SV',
+    badge: 'CARE COORDINATOR'
+  },
+  {
+    name: 'Nurse Kavita Nair, RN',
+    role: 'Clinical Charge Nurse & Safety Officer',
+    staffId: 'RN-55219',
+    department: 'Inpatient Safety & Quality',
+    email: 'kavita.nair@metrohealth.org',
+    pin: '1234',
+    color: '#ea580c',
+    initials: 'KN',
+    badge: 'CHARGE & SAFETY'
+  },
 ];
 
 export default function LoginPage() {
@@ -44,8 +91,8 @@ export default function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Tab: 'admin' | 'clinical' | 'patient'
-  const [activeTab, setActiveTab] = useState<'admin' | 'clinical' | 'patient'>('admin');
+  // Tab: 'admin' | 'clinical' | 'patient' | 'staff'
+  const [activeTab, setActiveTab] = useState<'admin' | 'clinical' | 'patient' | 'staff'>('admin');
 
   // Admin form state
   const [selectedAdminIndex, setSelectedAdminIndex] = useState(0);
@@ -65,6 +112,12 @@ export default function LoginPage() {
   const [patientPin, setPatientPin] = useState('1234');
   const [showPatientPin, setShowPatientPin] = useState(false);
 
+  // Hospital Staff form state
+  const [selectedStaffIndex, setSelectedStaffIndex] = useState(0);
+  const [staffIdInput, setStaffIdInput] = useState('LT-44201');
+  const [staffPinInput, setStaffPinInput] = useState('1234');
+  const [showStaffPin, setShowStaffPin] = useState(false);
+
   const [error, setError] = useState('');
 
   const handleAdminSelect = (idx: number) => {
@@ -82,6 +135,12 @@ export default function LoginPage() {
     setSelectedPatientIndex(idx);
     setPatientMrn(PATIENT_PRESETS[idx].mrn);
     setPatientPin(PATIENT_PRESETS[idx].pin);
+  };
+
+  const handleStaffSelect = (idx: number) => {
+    setSelectedStaffIndex(idx);
+    setStaffIdInput(STAFF_PRESETS[idx].staffId);
+    setStaffPinInput(STAFF_PRESETS[idx].pin);
   };
 
   const handleAdminSubmit = async (e: React.FormEvent) => {
@@ -137,6 +196,18 @@ export default function LoginPage() {
       navigate('/patient-portal');
     } catch (err: any) {
       const respMsg = err?.response?.data?.error?.message || err?.response?.data?.message || err?.message || 'Patient authentication failed. Check MRN & Passcode.';
+      setError(String(respMsg));
+    }
+  };
+
+  const handleStaffSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    try {
+      await login({ staffId: staffIdInput.trim(), pin: staffPinInput.trim(), password: staffPinInput.trim() });
+      navigate('/staff-portal');
+    } catch (err: any) {
+      const respMsg = err?.response?.data?.error?.message || err?.response?.data?.error || err?.response?.data?.message || err?.message || 'Hospital Staff authentication failed. Check Staff ID & Passcode.';
       setError(String(respMsg));
     }
   };
@@ -218,17 +289,17 @@ export default function LoginPage() {
       }}>
         <div style={{
           width: '100%',
-          maxWidth: 480,
+          maxWidth: 520,
           backgroundColor: '#ffffff',
           borderRadius: 22,
           boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255, 255, 255, 0.08)',
-          padding: '28px 28px 24px',
+          padding: '28px 24px 24px',
           color: '#0f172a'
         }}>
-          {/* Top 3-Way Segmented Navigation Tabs */}
+          {/* Top 4-Way Segmented Navigation Tabs */}
           <div style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(3, 1fr)',
+            gridTemplateColumns: 'repeat(4, 1fr)',
             backgroundColor: '#f1f5f9',
             padding: 4,
             borderRadius: 14,
@@ -243,11 +314,11 @@ export default function LoginPage() {
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: 5,
-                padding: '8px 10px',
+                padding: '8px 4px',
                 borderRadius: 10,
                 border: 'none',
                 cursor: 'pointer',
-                fontSize: 12,
+                fontSize: 11.5,
                 fontWeight: 700,
                 backgroundColor: activeTab === 'admin' ? '#0b4da2' : 'transparent',
                 color: activeTab === 'admin' ? '#ffffff' : '#64748b',
@@ -255,7 +326,7 @@ export default function LoginPage() {
                 transition: 'all 0.18s ease'
               }}
             >
-              <Shield size={14} />
+              <Shield size={13} />
               <span>1. Admin</span>
             </button>
 
@@ -267,11 +338,11 @@ export default function LoginPage() {
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: 5,
-                padding: '8px 10px',
+                padding: '8px 4px',
                 borderRadius: 10,
                 border: 'none',
                 cursor: 'pointer',
-                fontSize: 12,
+                fontSize: 11.5,
                 fontWeight: 700,
                 backgroundColor: activeTab === 'clinical' ? '#0b4da2' : 'transparent',
                 color: activeTab === 'clinical' ? '#ffffff' : '#64748b',
@@ -279,7 +350,7 @@ export default function LoginPage() {
                 transition: 'all 0.18s ease'
               }}
             >
-              <Stethoscope size={14} />
+              <Stethoscope size={13} />
               <span>2. Clinical</span>
             </button>
 
@@ -291,11 +362,11 @@ export default function LoginPage() {
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: 5,
-                padding: '8px 10px',
+                padding: '8px 4px',
                 borderRadius: 10,
                 border: 'none',
                 cursor: 'pointer',
-                fontSize: 12,
+                fontSize: 11.5,
                 fontWeight: 700,
                 backgroundColor: activeTab === 'patient' ? '#0b4da2' : 'transparent',
                 color: activeTab === 'patient' ? '#ffffff' : '#64748b',
@@ -303,8 +374,32 @@ export default function LoginPage() {
                 transition: 'all 0.18s ease'
               }}
             >
-              <Heart size={14} />
+              <Heart size={13} />
               <span>3. Patients</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => { setActiveTab('staff'); setError(''); }}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 5,
+                padding: '8px 4px',
+                borderRadius: 10,
+                border: 'none',
+                cursor: 'pointer',
+                fontSize: 11.5,
+                fontWeight: 700,
+                backgroundColor: activeTab === 'staff' ? '#0b4da2' : 'transparent',
+                color: activeTab === 'staff' ? '#ffffff' : '#64748b',
+                boxShadow: activeTab === 'staff' ? '0 2px 8px rgba(11, 77, 162, 0.35)' : 'none',
+                transition: 'all 0.18s ease'
+              }}
+            >
+              <Building2 size={13} />
+              <span>4. Hospital Staff</span>
             </button>
           </div>
 
@@ -977,6 +1072,220 @@ export default function LoginPage() {
               <div style={{ marginTop: 14, textAlign: 'center', fontSize: 11, color: '#64748b' }}>
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                   <Shield size={12} color="#16a34a" /> Protected by Hospital Patient Privacy &amp; HIPAA eMAR Gateway
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* ======================================================== */}
+          {/* TAB 4: HOSPITAL STAFF PORTAL LOGIN                       */}
+          {/* ======================================================== */}
+          {activeTab === 'staff' && (
+            <div>
+              <div style={{ textAlign: 'center', marginBottom: 18 }}>
+                <div style={{
+                  width: 48,
+                  height: 48,
+                  borderRadius: 12,
+                  background: 'linear-gradient(145deg, #0284c7, #0b4da2)',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  boxShadow: '0 8px 18px rgba(2, 132, 199, 0.28)',
+                  marginBottom: 10
+                }}>
+                  <Building2 size={24} color="#ffffff" />
+                </div>
+                <div>
+                  <span style={{
+                    display: 'inline-block',
+                    backgroundColor: '#e0f2fe',
+                    color: '#0369a1',
+                    fontSize: 10,
+                    fontWeight: 800,
+                    letterSpacing: '0.08em',
+                    padding: '3px 10px',
+                    borderRadius: 9999,
+                    marginBottom: 6
+                  }}>
+                    ALLIED &amp; HOSPITAL SERVICES
+                  </span>
+                </div>
+                <h2 style={{ fontSize: 20, fontWeight: 800, color: '#0f172a', margin: '4px 0 4px', letterSpacing: '-0.02em' }}>
+                  Hospital Staff Portal
+                </h2>
+                <p style={{ fontSize: 11, color: '#64748b', margin: 0 }}>
+                  Pathology Lab &bull; Diagnostic Radiology &bull; Care Coordination &bull; Operations
+                </p>
+              </div>
+
+              {/* Quick Staff Selection */}
+              <div style={{ marginBottom: 16 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                  <span style={{ fontSize: 10, fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                    SELECT HOSPITAL STAFF (DEMO):
+                  </span>
+                  <span style={{ fontSize: 10, color: '#0284c7', fontWeight: 700 }}>4 Preset Roles</span>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+                  {STAFF_PRESETS.map((s, idx) => {
+                    const isSelected = selectedStaffIndex === idx && staffIdInput === s.staffId;
+                    return (
+                      <button
+                        key={s.staffId}
+                        type="button"
+                        onClick={() => handleStaffSelect(idx)}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 8,
+                          padding: '7px 9px',
+                          borderRadius: 9,
+                          border: `1.5px solid ${isSelected ? s.color : '#e2e8f0'}`,
+                          backgroundColor: isSelected ? `${s.color}10` : '#ffffff',
+                          cursor: 'pointer',
+                          textAlign: 'left'
+                        }}
+                      >
+                        <div style={{
+                          width: 26,
+                          height: 26,
+                          borderRadius: '50%',
+                          backgroundColor: s.color,
+                          color: '#ffffff',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: 10,
+                          fontWeight: 800,
+                          flexShrink: 0
+                        }}>
+                          {s.initials}
+                        </div>
+                        <div style={{ overflow: 'hidden' }}>
+                          <div style={{ fontSize: 11, fontWeight: 700, color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {s.name}
+                          </div>
+                          <div style={{ fontSize: 9, color: '#64748b', fontFamily: 'monospace' }}>
+                            {s.staffId} &bull; {s.badge}
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Staff Form */}
+              <form onSubmit={handleStaffSubmit}>
+                <div style={{ marginBottom: 12 }}>
+                  <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#475569', marginBottom: 4 }}>
+                    Hospital Staff ID / Badge Number
+                  </label>
+                  <div style={{ position: 'relative' }}>
+                    <div style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }}>
+                      <Building2 size={16} />
+                    </div>
+                    <input
+                      type="text"
+                      value={staffIdInput}
+                      onChange={(e) => setStaffIdInput(e.target.value)}
+                      placeholder="e.g. LT-44201 or RT-55102"
+                      required
+                      style={{
+                        width: '100%',
+                        padding: '9px 12px 9px 36px',
+                        fontSize: 13,
+                        fontFamily: 'monospace',
+                        fontWeight: 700,
+                        border: '1.5px solid #cbd5e1',
+                        borderRadius: 8,
+                        outline: 'none',
+                        color: '#0f172a',
+                        backgroundColor: '#ffffff',
+                        boxSizing: 'border-box'
+                      }}
+                    />
+                  </div>
+                </div>
+
+                <div style={{ marginBottom: 14 }}>
+                  <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#475569', marginBottom: 4 }}>
+                    Staff Passcode / Security PIN
+                  </label>
+                  <div style={{ position: 'relative' }}>
+                    <div style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }}>
+                      <Lock size={16} />
+                    </div>
+                    <input
+                      type={showStaffPin ? 'text' : 'password'}
+                      value={staffPinInput}
+                      onChange={(e) => setStaffPinInput(e.target.value)}
+                      placeholder="Enter PIN (e.g. 1234)"
+                      required
+                      style={{
+                        width: '100%',
+                        padding: '9px 36px 9px 36px',
+                        fontSize: 14,
+                        letterSpacing: showStaffPin ? '0' : '0.2em',
+                        fontWeight: 700,
+                        border: '1.5px solid #cbd5e1',
+                        borderRadius: 8,
+                        outline: 'none',
+                        color: '#0f172a',
+                        backgroundColor: '#ffffff',
+                        boxSizing: 'border-box'
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowStaffPin(!showStaffPin)}
+                      style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8' }}
+                    >
+                      {showStaffPin ? <EyeOff size={15} /> : <Eye size={15} />}
+                    </button>
+                  </div>
+                </div>
+
+                {error && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', borderRadius: 8, backgroundColor: '#fef2f2', border: '1px solid #fecaca', color: '#b91c1c', fontSize: 12, marginBottom: 14 }}>
+                    <AlertTriangle size={15} style={{ flexShrink: 0 }} />
+                    <span>{error}</span>
+                  </div>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={isLoading}
+                  style={{
+                    width: '100%',
+                    padding: '11px 18px',
+                    borderRadius: 9,
+                    backgroundColor: '#0284c7',
+                    backgroundImage: 'linear-gradient(180deg, #0284c7 0%, #0369a1 100%)',
+                    color: '#ffffff',
+                    border: 'none',
+                    fontSize: 13,
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 8,
+                    boxShadow: '0 4px 12px rgba(2, 132, 199, 0.3)'
+                  }}
+                >
+                  {isLoading ? (
+                    <><Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} /><span>Verifying Staff Credentials...</span></>
+                  ) : (
+                    <><Building2 size={16} /><span>Authenticate &amp; Enter Staff Portal</span><ArrowRight size={15} /></>
+                  )}
+                </button>
+              </form>
+
+              <div style={{ marginTop: 14, textAlign: 'center', fontSize: 11, color: '#64748b' }}>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                  <Shield size={12} color="#0284c7" /> Pathology &bull; Radiology &bull; Care Coordination &bull; Operations
                 </span>
               </div>
             </div>

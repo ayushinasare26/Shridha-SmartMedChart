@@ -2,9 +2,10 @@ import { useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import {
   X, AlertTriangle, Shield, Check, Copy, Printer,
-  PhoneCall, Stethoscope, User, MapPin, Calendar, Clock, Lock, ExternalLink
+  PhoneCall, Stethoscope, User, MapPin, Calendar, Clock, Lock, ExternalLink, ShieldCheck
 } from 'lucide-react';
 import { format } from 'date-fns';
+import { useAuth } from '../hooks/useAuth';
 
 export interface HospitalPerson {
   type: 'PATIENT' | 'STAFF' | 'DOCTOR' | 'NURSE' | 'PHARMACIST' | 'ADMIN';
@@ -39,11 +40,13 @@ interface HospitalPersonQRModalProps {
 }
 
 export function HospitalPersonQRModal({ isOpen, onClose, person }: HospitalPersonQRModalProps) {
+  const { user } = useAuth();
   const [copied, setCopied] = useState(false);
 
   if (!isOpen || !person) return null;
 
   const isPatient = person.type === 'PATIENT' || (!person.role && Boolean(person.mrn));
+  const isStaffViewer = user?.role === 'ALLIED_STAFF' || user?.role === 'OTHER_STAFF';
 
   // Compute DOB and Age for patient
   let age: number | null = null;
@@ -67,10 +70,8 @@ export function HospitalPersonQRModal({ isOpen, onClose, person }: HospitalPerso
   // Build direct scannable verification URL so smartphone cameras immediately open the live hospital record
   const targetId = isPatient ? (person.mrn || person.id || '94021-08') : (person.staffId || person.id || 'DOC-4401');
   const targetType = isPatient ? 'PATIENT' : (person.role || 'STAFF');
-  const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
-  const host = isLocal ? `10.17.114.233:${window.location.port || '5173'}` : window.location.host;
-  const proto = window.location.protocol || 'http:';
-  const verificationUrl = `${proto}//${host}/verify?id=${encodeURIComponent(targetId)}&type=${targetType}`;
+  const viewerParam = isStaffViewer ? '&viewer=staff' : '';
+  const verificationUrl = `${window.location.origin}/verify?id=${encodeURIComponent(targetId)}&type=${targetType}${viewerParam}`;
   const qrPayload = verificationUrl;
 
   const handleCopy = () => {
@@ -320,62 +321,84 @@ export function HospitalPersonQRModal({ isOpen, onClose, person }: HospitalPerso
                   </div>
                 </div>
 
-                {/* Verified Allergies Alert */}
-                {hasAllergy ? (
+                {/* Clinical Details: Concealed from Hospital Staff */}
+                {isStaffViewer ? (
                   <div style={{
-                    backgroundColor: '#fef2f2',
-                    border: '1px solid #fecaca',
+                    backgroundColor: '#f0f9ff',
+                    border: '1px solid #bae6fd',
                     borderRadius: 8,
-                    padding: '8px 12px',
+                    padding: '10px 12px',
                     fontSize: 11,
-                    color: '#991b1b',
+                    color: '#0369a1',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: 6
+                    gap: 8
                   }}>
-                    <AlertTriangle size={14} color="#dc2626" style={{ flexShrink: 0 }} />
+                    <ShieldCheck size={16} color="#0284c7" style={{ flexShrink: 0 }} />
                     <div>
-                      <strong>Allergy Alert:</strong> {allergyList.join(', ')}
+                      <strong>Hospital Staff Privacy Policy:</strong> Patient clinical vitals, medical problems, and diagnoses are strictly concealed.
                     </div>
                   </div>
                 ) : (
-                  <div style={{
-                    backgroundColor: '#f0fdf4',
-                    border: '1px solid #bbf7d0',
-                    borderRadius: 8,
-                    padding: '8px 12px',
-                    fontSize: 11,
-                    color: '#166534'
-                  }}>
-                    No Known Drug Allergies (NKDA) verified
-                  </div>
+                  <>
+                    {/* Verified Allergies Alert */}
+                    {hasAllergy ? (
+                      <div style={{
+                        backgroundColor: '#fef2f2',
+                        border: '1px solid #fecaca',
+                        borderRadius: 8,
+                        padding: '8px 12px',
+                        fontSize: 11,
+                        color: '#991b1b',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 6
+                      }}>
+                        <AlertTriangle size={14} color="#dc2626" style={{ flexShrink: 0 }} />
+                        <div>
+                          <strong>Allergy Alert:</strong> {allergyList.join(', ')}
+                        </div>
+                      </div>
+                    ) : (
+                      <div style={{
+                        backgroundColor: '#f0fdf4',
+                        border: '1px solid #bbf7d0',
+                        borderRadius: 8,
+                        padding: '8px 12px',
+                        fontSize: 11,
+                        color: '#166534'
+                      }}>
+                        No Known Drug Allergies (NKDA) verified
+                      </div>
+                    )}
+
+                    {/* Family Emergency Contact */}
+                    <div style={{
+                      backgroundColor: '#f8fafc',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: 8,
+                      padding: '8px 12px',
+                      fontSize: 11
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 5, color: '#dc2626', fontWeight: 800, fontSize: 10, marginBottom: 2 }}>
+                        <PhoneCall size={11} />
+                        <span>FAMILY EMERGENCY CONTACT</span>
+                      </div>
+                      <div style={{ color: '#0f172a', fontWeight: 700 }}>
+                        {person.emergencyContactName || 'Sunita Patil'}
+                        <span style={{ color: '#64748b', fontWeight: 500 }}> ({person.emergencyContactRelation || 'Spouse / Next of Kin'})</span>
+                      </div>
+                      <div style={{ fontFamily: 'monospace', color: '#0b4da2', fontWeight: 800, marginTop: 2 }}>
+                        {person.emergencyContactPhone || '+91 98201 34982'}
+                      </div>
+                    </div>
+
+                    {/* Admission Diagnosis */}
+                    <div style={{ fontSize: 11, color: '#64748b' }}>
+                      <strong>Admission Diagnosis:</strong> {person.admissionDiagnosis || 'Acute Inpatient Observation & Sepsis Protocol'}
+                    </div>
+                  </>
                 )}
-
-                {/* Family Emergency Contact */}
-                <div style={{
-                  backgroundColor: '#f8fafc',
-                  border: '1px solid #e2e8f0',
-                  borderRadius: 8,
-                  padding: '8px 12px',
-                  fontSize: 11
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 5, color: '#dc2626', fontWeight: 800, fontSize: 10, marginBottom: 2 }}>
-                    <PhoneCall size={11} />
-                    <span>FAMILY EMERGENCY CONTACT</span>
-                  </div>
-                  <div style={{ color: '#0f172a', fontWeight: 700 }}>
-                    {person.emergencyContactName || 'Sunita Patil'}
-                    <span style={{ color: '#64748b', fontWeight: 500 }}> ({person.emergencyContactRelation || 'Spouse / Next of Kin'})</span>
-                  </div>
-                  <div style={{ fontFamily: 'monospace', color: '#0b4da2', fontWeight: 800, marginTop: 2 }}>
-                    {person.emergencyContactPhone || '+1 (555) 349-8291'}
-                  </div>
-                </div>
-
-                {/* Admission Diagnosis */}
-                <div style={{ fontSize: 11, color: '#64748b' }}>
-                  <strong>Admission Diagnosis:</strong> {person.admissionDiagnosis || 'Acute Inpatient Observation & Sepsis Protocol'}
-                </div>
               </>
             ) : (
               /* Staff Specific Info */
