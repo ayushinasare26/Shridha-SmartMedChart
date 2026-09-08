@@ -566,14 +566,24 @@ export default function AdminPage() {
             borderRadius: 9999,
             border: '1px solid #e2e8f0'
           }}>
-            <img
-              src={currentUser?.avatarUrl || 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=150'}
-              alt="Admin Avatar"
-              style={{ width: 32, height: 32, borderRadius: '50%', objectFit: 'cover' }}
-            />
+            <div style={{
+              width: 32,
+              height: 32,
+              borderRadius: '50%',
+              backgroundColor: '#0b4da2',
+              color: '#ffffff',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: 12,
+              fontWeight: 700,
+              flexShrink: 0
+            }}>
+              {(currentUser?.name || 'RV').split(' ').filter(n => !['Dr.', 'MD', 'RN', 'MBA', 'PhD', 'Pharm.'].includes(n)).map(w => w[0]).join('').slice(0, 2).toUpperCase() || (currentUser?.name || 'RV').slice(0, 2).toUpperCase()}
+            </div>
             <div>
               <div style={{ fontSize: 12, fontWeight: 700, color: '#0f172a', lineHeight: 1.2 }}>
-                {currentUser?.name || 'Dr. Evelyn Vance, MD'}
+                {currentUser?.name || 'Dr. Rohit Verma, MD'}
               </div>
               <div style={{ fontSize: 10, color: '#64748b', lineHeight: 1 }}>
                 {currentUser?.staffId || 'ADM-9001'} &bull; Admin
@@ -630,7 +640,7 @@ export default function AdminPage() {
             </div>
 
             <h1 style={{ fontSize: 26, fontWeight: 800, margin: '0 0 6px', letterSpacing: '-0.02em', color: '#ffffff' }}>
-              Welcome, {currentUser?.name || 'Dr. Evelyn Vance, MD'}
+              Welcome, {currentUser?.name || 'Dr. Rohit Verma, MD'}
             </h1>
             <p style={{ fontSize: 13, color: '#94a3b8', margin: 0, maxWidth: 620, lineHeight: 1.5 }}>
               Authorize, credential, and onboard new hospital doctors, nurses, and staff — and inspect admitted inpatients with real-time eMAR chart synchronizations.
@@ -959,11 +969,22 @@ export default function AdminPage() {
                       >
                         <td style={{ padding: '14px 24px' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                            <img
-                              src={staff.avatarUrl || `https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=150`}
-                              alt={staff.name}
-                              style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover', border: '1.5px solid #e2e8f0', flexShrink: 0 }}
-                            />
+                            <div style={{
+                              width: 38,
+                              height: 38,
+                              borderRadius: '50%',
+                              backgroundColor: isDoc ? '#eff6ff' : isNurse ? '#f0fdf4' : isPharm ? '#f0fdfa' : isAdmin ? '#0f172a' : '#faf5ff',
+                              color: isDoc ? '#1d4ed8' : isNurse ? '#15803d' : isPharm ? '#0f766e' : isAdmin ? '#ffffff' : '#7e22ce',
+                              border: `1.5px solid ${isDoc ? '#bfdbfe' : isNurse ? '#bbf7d0' : isPharm ? '#99f6e4' : isAdmin ? '#334155' : '#e9d5ff'}`,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              fontSize: 13,
+                              fontWeight: 800,
+                              flexShrink: 0
+                            }}>
+                              {staff.name.split(' ').filter(n => !['Dr.', 'MD', 'RN', 'MBA', 'PhD', 'Pharm.'].includes(n)).map(w => w[0]).join('').slice(0, 2).toUpperCase() || staff.name.slice(0, 2).toUpperCase()}
+                            </div>
                             <div>
                               <div style={{ fontSize: 13, fontWeight: 700, color: '#0f172a' }}>{staff.name}</div>
                               <div style={{ fontSize: 11, color: '#64748b' }}>{staff.title || staff.role}</div>

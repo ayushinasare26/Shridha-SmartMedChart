@@ -11,21 +11,20 @@ import { useState } from 'react';
 import { HospitalPersonQRModal } from './HospitalPersonQRModal';
 
 const NAV_DOCTOR: Array<{ to: string; label: string; icon: any; badge?: string }> = [
-  { to: '/doctor', label: 'Overview & Schedule', icon: LayoutDashboard },
-  { to: '/patients', label: 'Patients', icon: Users },
-  { to: '/prescriptions', label: 'CPOE Prescriptions', icon: FileText, badge: 'STAT' },
-  { to: '/bedside-scan', label: 'Bedside 4-Pt Scanner', icon: Scan },
-  { to: '/safety-audit', label: 'Safety, AI & Audit', icon: Shield },
+  { to: '/doctor', label: 'Doctor Dashboard', icon: LayoutDashboard },
+  { to: '/patients', label: 'My Patients', icon: Users },
+  { to: '/prescriptions', label: 'Prescriptions', icon: FileText, badge: 'STAT' },
+  { to: '/bedside-scan', label: 'Bedside Scanner', icon: Scan },
+  { to: '/safety-audit', label: 'Safety & AI Alerts', icon: Shield },
   { to: '/reports', label: 'Reports & Analytics', icon: BarChart2 },
-  { to: '/admin', label: 'Admin', icon: Settings },
 ];
 
 const NAV_NURSE: Array<{ to: string; label: string; icon: any; badge?: string }> = [
-  { to: '/nurse', label: 'Overview & Schedule', icon: LayoutDashboard, badge: '42' },
-  { to: '/patients', label: 'Patient eMAR', icon: Activity, badge: 'ICU-12' },
-  { to: '/prescriptions', label: 'CPOE Prescriptions', icon: FileText, badge: 'STAT' },
-  { to: '/bedside-scan', label: 'Bedside 4-Pt Scanner', icon: Scan },
-  { to: '/safety-audit', label: 'Safety, AI & Audit', icon: Shield },
+  { to: '/nurse', label: 'Nurse Dashboard', icon: LayoutDashboard, badge: '42' },
+  { to: '/patients', label: 'Patient Med Chart', icon: Activity, badge: 'ICU-12' },
+  { to: '/prescriptions', label: 'Prescriptions', icon: FileText, badge: 'STAT' },
+  { to: '/bedside-scan', label: 'Bedside Scanner', icon: Scan },
+  { to: '/safety-audit', label: 'Safety & AI Alerts', icon: Shield },
 ];
 
 const NAV_PHARMACIST: Array<{ to: string; label: string; icon: any; badge?: string }> = [

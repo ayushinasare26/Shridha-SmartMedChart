@@ -117,3 +117,12 @@ export const wardService = {
   getAll: () => api.get('/wards').then(r => r.data),
   getByUnit: (unit: string) => api.get(`/wards/${unit}`).then(r => r.data),
 };
+
+export const noteService = {
+  getAll: (params?: Record<string, string>) =>
+    api.get('/notes', { params }).then(r => r.data),
+  create: (data: any) =>
+    api.post('/notes', data).then(r => r.data),
+  acknowledge: (id: string) =>
+    api.patch(`/notes/${id}/acknowledge`).then(r => r.data),
+};

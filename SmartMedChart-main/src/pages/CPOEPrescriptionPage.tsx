@@ -58,14 +58,29 @@ export default function CPOEPrescriptionPage() {
   const [pendingSubmit, setPendingSubmit] = useState<FormData | null>(null);
   const [selectedOverride, setSelectedOverride] = useState('');
 
-  const { data: patients = [] } = useQuery({
+  const { data: rawPatients = [] } = useQuery({
     queryKey: ['patients-active'],
     queryFn: () => patientService.getAll({ status: 'ACTIVE' }),
   });
 
-  const { data: prescriptions = [] } = useQuery({
+  const { data: rawPrescriptions = [] } = useQuery({
     queryKey: ['my-prescriptions'],
     queryFn: () => prescriptionService.getAll(),
+  });
+
+  // Doctor isolation: strictly only allow prescribing to assigned patients
+  const patients = (rawPatients as any[]).filter(p => {
+    if (user?.role === 'DOCTOR' && user?.id) {
+      return p.attendingId === user.id;
+    }
+    return true;
+  });
+
+  const prescriptions = (rawPrescriptions as any[]).filter(p => {
+    if (user?.role === 'DOCTOR' && user?.id) {
+      return !p.patient?.attendingId || p.patient.attendingId === user.id;
+    }
+    return true;
   });
 
   const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm<FormData>({
@@ -158,14 +173,12 @@ export default function CPOEPrescriptionPage() {
         </div>
       </div>
 
-      <WorkflowStepsNavBar />
-
       {/* Assigned Physician */}
       {watchPatient && selectedPatient && (
-        <div style={{ background: 'rgba(10,15,26,0.8)', borderBottom: '1px solid var(--color-border)', padding: '8px 24px', display: 'flex', alignItems: 'center', gap: 16, fontSize: 12, width: '100%', boxSizing: 'border-box' }}>
+        <div style={{ background: '#f8fafc', borderBottom: '1px solid var(--color-border)', padding: '8px 24px', display: 'flex', alignItems: 'center', gap: 16, fontSize: 12, width: '100%', boxSizing: 'border-box' }}>
           <span style={{ color: 'var(--color-text-muted)' }}>ASSIGNED PHYSICIAN</span>
           <span style={{ fontWeight: 600, color: 'var(--color-text-primary)' }}>{user?.name}</span>
-          <span style={{ color: 'var(--color-text-muted)', marginLeft: 8 }}>Credentialed Level-IV CPOE</span>
+          <span style={{ color: 'var(--color-text-muted)', marginLeft: 8 }}>Credentialed Attending Intensivist</span>
           {selectedPatient.allergies?.map((a: any) => (
             <div key={a.id} className="alert-critical" style={{ padding: '4px 10px', borderRadius: 6, fontSize: 11, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
               <AlertTriangle size={11} />

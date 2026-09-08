@@ -6,18 +6,33 @@ import { useState } from 'react';
 import { format, differenceInYears } from 'date-fns';
 import { HospitalPersonQRModal, HospitalPerson } from '../components/HospitalPersonQRModal';
 import { WorkflowStepsNavBar } from '../components/WorkflowStepsNavBar';
+import { PatientCaseFileModal } from '../components/PatientCaseFileModal';
+import { ClipboardList } from 'lucide-react';
+
+import { useAuth } from '../hooks/useAuth';
 
 export default function PatientsListPage() {
+  const { user } = useAuth();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [search, setSearch] = useState('');
   const [selectedPatientForQR, setSelectedPatientForQR] = useState<HospitalPerson | null>(null);
+  const [selectedCaseFileId, setSelectedCaseFileId] = useState<string | null>(null);
 
-  const { data: patients = [], isLoading } = useQuery({
+  const { data: rawPatients = [], isLoading } = useQuery({
     queryKey: ['patients-all'],
     queryFn: () => patientService.getAll({ status: 'ACTIVE' }),
   });
 
-  const filtered = (patients as any[]).filter(p =>
+  const isDoctor = user?.role === 'DOCTOR';
+  const myPatients = (rawPatients as any[]).filter(p => {
+    if (isDoctor && user?.id) {
+      return p.attendingId === user.id;
+    }
+    return true;
+  });
+
+  const filtered = myPatients.filter(p =>
     p.name.toLowerCase().includes(search.toLowerCase()) ||
     p.mrn.includes(search) ||
     (p.bed || '').toLowerCase().includes(search.toLowerCase())
@@ -39,12 +54,10 @@ export default function PatientsListPage() {
         </div>
       </div>
 
-      <WorkflowStepsNavBar />
-
       <div className="page-content">
         <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <h1 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: 'var(--color-text-primary)' }}>
-            Active Inpatients — Ward 4B ICU <span style={{ fontSize: 15, fontWeight: 400, color: 'var(--color-text-muted)' }}>({filtered.length} of 18 beds)</span>
+            {isDoctor ? 'My Assigned Inpatients — Ward 4B ICU' : 'Active Inpatients — Ward 4B ICU'} <span style={{ fontSize: 15, fontWeight: 400, color: 'var(--color-text-muted)' }}>({filtered.length} patients)</span>
           </h1>
         </div>
 
@@ -67,92 +80,168 @@ export default function PatientsListPage() {
               <div
                 key={p.id}
                 className="card"
-                style={{ padding: 0, cursor: 'pointer', overflow: 'hidden', borderColor: criticalAllergy ? 'rgba(239,68,68,0.3)' : 'var(--color-border)' }}
+                style={{
+                  padding: 0,
+                  cursor: 'pointer',
+                  overflow: 'hidden',
+                  backgroundColor: '#ffffff',
+                  borderRadius: 12,
+                  border: criticalAllergy ? '1.5px solid #fca5a5' : '1.5px solid #e2e8f0',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+                  transition: 'all 0.15s ease'
+                }}
                 onClick={() => navigate(`/patients/${p.id}`)}
               >
-                {/* Card Header */}
-                <div style={{ padding: '14px 16px', background: 'rgba(10,15,26,0.5)', borderBottom: '1px solid var(--color-border)', display: 'flex', gap: 12, alignItems: 'center' }}>
-                  <div style={{ width: 40, height: 40, borderRadius: 10, background: 'var(--color-bg-hover)', border: '1px solid var(--color-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 800, color: 'var(--color-accent-blue-light)', flexShrink: 0 }}>
+                {/* Card Header — Clean Clinical Light Style */}
+                <div style={{
+                  padding: '14px 16px',
+                  backgroundColor: '#f8fafc',
+                  borderBottom: '1px solid #e2e8f0',
+                  display: 'flex',
+                  gap: 12,
+                  alignItems: 'center'
+                }}>
+                  <div style={{
+                    width: 42,
+                    height: 42,
+                    borderRadius: 10,
+                    backgroundColor: '#eff6ff',
+                    border: '1.5px solid #bfdbfe',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: 14,
+                    fontWeight: 800,
+                    color: '#1d4ed8',
+                    flexShrink: 0
+                  }}>
                     {(p.bed || 'XX').replace('ICU-', '')}
                   </div>
                   <div style={{ flex: 1 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--color-text-primary)' }}>{p.name}</span>
-                      {p.npoStatus && <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--color-due-amber)', background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.3)', borderRadius: 3, padding: '1px 5px' }}>NPO</span>}
-                      {p.isolationStatus && <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--color-stat-red)', background: 'var(--color-stat-red-bg)', border: '1px solid var(--color-stat-red-border)', borderRadius: 3, padding: '1px 5px' }}>ISOLATION</span>}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                      <span style={{ fontWeight: 800, fontSize: 14, color: '#0f172a' }}>{p.name}</span>
+                      {p.npoStatus && <span style={{ fontSize: 9, fontWeight: 700, color: '#d97706', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 3, padding: '1px 5px' }}>NPO</span>}
+                      {p.isolationStatus && <span style={{ fontSize: 9, fontWeight: 700, color: '#dc2626', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 3, padding: '1px 5px' }}>ISOLATION</span>}
                       {statRx && <span className="chip chip-stat" style={{ fontSize: 9 }}>STAT</span>}
                     </div>
-                    <div style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>MRN: {p.mrn} · {p.sex} · {age}y · {p.weight}kg</div>
+                    <div style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>
+                      MRN: <span style={{ fontWeight: 600, color: '#334155' }}>{p.mrn}</span> &bull; {p.sex} &bull; {age}y &bull; {p.weight}kg
+                    </div>
                   </div>
-                  <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 3 }}>
-                    <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--color-accent-blue-light)' }}>Bed {p.bed}</div>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setSelectedPatientForQR({
-                          type: 'PATIENT',
-                          name: p.name,
-                          mrn: p.mrn,
-                          dob: p.dob,
-                          sex: p.sex,
-                          bed: p.bed,
-                          ward: 'Ward 4B ICU',
-                          allergies: p.allergies,
-                          emergencyContactName: p.emergencyContactName,
-                          emergencyContactRelation: p.emergencyContactRelation,
-                          emergencyContactPhone: p.emergencyContactPhone,
-                          attendingName: 'Dr. V. Sharma, MD',
-                          admissionDiagnosis: p.admissionDiagnosis
-                        });
-                      }}
-                      style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: 4,
-                        padding: '2px 7px',
-                        borderRadius: 5,
-                        backgroundColor: 'rgba(56, 189, 248, 0.12)',
-                        border: '1px solid rgba(56, 189, 248, 0.25)',
-                        color: 'var(--color-accent-blue-light)',
-                        fontSize: 10,
-                        fontWeight: 700,
-                        cursor: 'pointer'
-                      }}
-                      title="View Patient Digital Wristband & QR Code"
-                    >
-                      <QrCode size={11} />
-                      <span>QR Wristband</span>
-                    </button>
+                  <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: '#0b4da2' }}>Bed {p.bed}</div>
+                    <div style={{ display: 'flex', gap: 4 }}>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedPatientForQR({
+                            type: 'PATIENT',
+                            name: p.name,
+                            mrn: p.mrn,
+                            dob: p.dob,
+                            sex: p.sex,
+                            bed: p.bed,
+                            ward: 'Ward 4B ICU',
+                            allergies: p.allergies,
+                            emergencyContactName: p.emergencyContactName,
+                            emergencyContactRelation: p.emergencyContactRelation,
+                            emergencyContactPhone: p.emergencyContactPhone,
+                            attendingName: 'Dr. V. Sharma, MD',
+                            admissionDiagnosis: p.admissionDiagnosis
+                          });
+                        }}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: 3,
+                          padding: '3px 8px',
+                          borderRadius: 6,
+                          backgroundColor: '#eff6ff',
+                          border: '1px solid #bfdbfe',
+                          color: '#1d4ed8',
+                          fontSize: 10,
+                          fontWeight: 700,
+                          cursor: 'pointer'
+                        }}
+                        title="View Patient Digital Wristband & QR Code"
+                      >
+                        <QrCode size={11} />
+                        <span>QR Wristband</span>
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedCaseFileId(p.id);
+                        }}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: 3,
+                          padding: '3px 8px',
+                          borderRadius: 6,
+                          backgroundColor: '#ecfdf5',
+                          border: '1px solid #a7f3d0',
+                          color: '#059669',
+                          fontSize: 10,
+                          fontWeight: 700,
+                          cursor: 'pointer'
+                        }}
+                        title="Open Comprehensive Patient Case File"
+                      >
+                        <ClipboardList size={11} />
+                        <span>Case File</span>
+                      </button>
+                    </div>
                   </div>
                 </div>
 
                 {/* Card Body */}
-                <div style={{ padding: '12px 16px' }}>
+                <div style={{ padding: '12px 16px', backgroundColor: '#ffffff' }}>
                   {p.admissionDiagnosis && (
-                    <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginBottom: 8 }}>
-                      <span style={{ color: 'var(--color-text-muted)' }}>Dx: </span>{p.admissionDiagnosis.slice(0, 60)}{p.admissionDiagnosis.length > 60 ? '...' : ''}
+                    <div style={{ fontSize: 12, color: '#334155', marginBottom: 8, lineHeight: 1.4 }}>
+                      <span style={{ color: '#64748b', fontWeight: 600 }}>Dx: </span>{p.admissionDiagnosis}
                     </div>
                   )}
 
                   {/* Allergies */}
                   {hasAllergy && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
-                      <AlertTriangle size={11} color={criticalAllergy ? 'var(--color-stat-red)' : 'var(--color-due-amber)'} />
-                      <span style={{ fontSize: 11, color: criticalAllergy ? 'var(--color-stat-red)' : 'var(--color-due-amber)', fontWeight: 600 }}>
-                        {p.allergies.map((a: any) => a.allergen).join(', ')} Allergy
-                      </span>
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      marginBottom: 8,
+                      padding: '4px 8px',
+                      borderRadius: 6,
+                      backgroundColor: criticalAllergy ? '#fef2f2' : '#fffbeb',
+                      border: `1px solid ${criticalAllergy ? '#fecaca' : '#fde68a'}`,
+                      color: criticalAllergy ? '#b91c1c' : '#b45309',
+                      fontSize: 11,
+                      fontWeight: 600
+                    }}>
+                      <AlertTriangle size={12} color={criticalAllergy ? '#dc2626' : '#d97706'} />
+                      <span>{p.allergies.map((a: any) => a.allergen).join(', ')} Allergy</span>
                     </div>
                   )}
 
                   {/* Active Prescriptions count */}
-                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
                     {p.prescriptions?.slice(0, 3).map((rx: any) => (
-                      <span key={rx.id} style={{ fontSize: 10, background: 'var(--color-bg-hover)', border: '1px solid var(--color-border)', borderRadius: 4, padding: '2px 7px', color: 'var(--color-text-muted)' }}>
-                        {rx.medicationName.split(' ')[0]}
+                      <span key={rx.id} style={{
+                        fontSize: 10,
+                        fontWeight: 600,
+                        background: '#f8fafc',
+                        border: '1px solid #e2e8f0',
+                        borderRadius: 4,
+                        padding: '2px 7px',
+                        color: '#475569'
+                      }}>
+                        {rx.medicationName?.split('(')[0]?.trim()}
                       </span>
                     ))}
-                    {(p.prescriptions?.length || 0) > 3 && (
-                      <span style={{ fontSize: 10, color: 'var(--color-text-muted)' }}>+{p.prescriptions.length - 3} more</span>
+                    {p.prescriptions?.length > 3 && (
+                      <span style={{ fontSize: 10, color: '#64748b', fontWeight: 600 }}>
+                        +{p.prescriptions.length - 3} more
+                      </span>
                     )}
                   </div>
                 </div>
@@ -175,6 +264,15 @@ export default function PatientsListPage() {
         onClose={() => setSelectedPatientForQR(null)}
         person={selectedPatientForQR}
       />
+
+      {/* Patient Clinical Case File Modal */}
+      {selectedCaseFileId && (
+        <PatientCaseFileModal
+          patientId={selectedCaseFileId}
+          onClose={() => setSelectedCaseFileId(null)}
+          onNewOrder={(patId) => navigate(`/prescriptions/new?patientId=${patId}`)}
+        />
+      )}
     </div>
   );
 }

@@ -139,7 +139,16 @@ router.get('/:identifier', async (req: Request, res: Response, next: NextFunctio
       res.json({
         type: 'PATIENT',
         verified: true,
-        hospital: 'Metropolitan General Hospital',
+        hospital: 'Shridha Hospital & Research Institute, Nagpur',
+        hospitalInfo: {
+          name: 'Shridha Hospital & Research Institute',
+          address: 'Wardha Road, Next to Bank of Maharashtra, Ajni Chowk, Samarth Nagar East, Nagpur, Maharashtra 440015',
+          landmark: 'Near Ajni Metro Station',
+          phone: '0712-2420299 / 0712-2985296',
+          mobile: '+91 93735 10580',
+          emergency: '108 / 112',
+          directors: 'Dr. Dinesh Sarda, MS, MCh & Dr. Neha Sarda, MD',
+        },
         verifiedAt: new Date().toISOString(),
         patient: {
           id: patient.id,
@@ -256,7 +265,16 @@ router.get('/:identifier', async (req: Request, res: Response, next: NextFunctio
       res.json({
         type: 'STAFF',
         verified: true,
-        hospital: 'Metropolitan General Hospital',
+        hospital: 'Shridha Hospital & Research Institute, Nagpur',
+        hospitalInfo: {
+          name: 'Shridha Hospital & Research Institute',
+          address: 'Wardha Road, Next to Bank of Maharashtra, Ajni Chowk, Samarth Nagar East, Nagpur, Maharashtra 440015',
+          landmark: 'Near Ajni Metro Station',
+          phone: '0712-2420299 / 0712-2985296',
+          mobile: '+91 93735 10580',
+          emergency: '108 / 112',
+          directors: 'Dr. Dinesh Sarda, MS, MCh & Dr. Neha Sarda, MD',
+        },
         verifiedAt: new Date().toISOString(),
         staff: {
           id: staff.id,

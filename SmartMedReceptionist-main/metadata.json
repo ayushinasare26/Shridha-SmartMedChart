@@ -1,0 +1,8 @@
+{
+  "name": "SmartMedChart Receptionist Portal",
+  "description": "Hospital receptionist portal to register new patients, admit patients to hospital wards with bed numbers, schedule shift-wise assistant doctors, directly allot attending doctors, generate scannable QR token passes, and view simplified case files.",
+  "requestFramePermissions": [
+    "camera"
+  ],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

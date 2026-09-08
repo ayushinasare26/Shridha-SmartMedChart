@@ -48,6 +48,8 @@ model User {
   notifications        Notification[]
   shifts               Shift[]
   scheduleAdministered MedicationSchedule[]   @relation("AdminBy")
+  authoredNotes        ClinicalNote[]         @relation("AuthoredNotes")
+  acknowledgedNotes    ClinicalNote[]         @relation("AcknowledgedNotes")
 
   refreshTokens RefreshToken[]
 }
@@ -121,6 +123,7 @@ model Patient {
   safetyAlerts    SafetyAlert[]
   auditLogs       AuditLog[]
   notifications   Notification[]
+  clinicalNotes   ClinicalNote[]
 }
 
 model Allergy {
@@ -272,3 +275,27 @@ model Notification {
   priority  String   @default("NORMAL") // LOW | NORMAL | HIGH | URGENT
   createdAt DateTime @default(now())
 }
+
+model ClinicalNote {
+  id               String    @id @default(uuid())
+  patientId        String
+  patient          Patient   @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  authorId         String
+  author           User      @relation("AuthoredNotes", fields: [authorId], references: [id])
+  type             String    // DOCTOR_PROGRESS_NOTE | NURSE_SHIFT_NOTE | NURSE_BEDSIDE_NOTE | CONSULT_NOTE
+  title            String
+  content          String
+  category         String?   // SOAP | VITALS_OBSERVATION | NURSING_ASSESSMENT | ROUNDS
+  subjective       String?
+  objective        String?
+  assessment       String?
+  plan             String?
+  vitalsData       String?   // e.g. JSON string of BP, HR, SpO2, Temp, RR
+  isAcknowledged   Boolean   @default(false)
+  acknowledgedById String?
+  acknowledgedBy   User?     @relation("AcknowledgedNotes", fields: [acknowledgedById], references: [id])
+  acknowledgedAt   DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+}
+

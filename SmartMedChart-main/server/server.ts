@@ -20,6 +20,7 @@ import reportRoutes from './routes/report.routes';
 import wardRoutes from './routes/ward.routes';
 import administrationRoutes from './routes/administration.routes';
 import verificationRoutes from './routes/verification.routes';
+import noteRoutes from './routes/note.routes';
 
 import { errorHandler } from './middleware/error.middleware';
 import { prisma } from './config/prisma';
@@ -98,6 +99,7 @@ const routes: Array<[string, any, any]> = [
   ['/reports', null, reportRoutes],
   ['/wards', null, wardRoutes],
   ['/verify', null, verificationRoutes],
+  ['/notes', null, noteRoutes],
 ];
 
 for (const [prefix, routeLimiter, router] of routes) {
