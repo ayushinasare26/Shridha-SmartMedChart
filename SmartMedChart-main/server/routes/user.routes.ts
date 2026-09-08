@@ -125,6 +125,113 @@ router.post('/', authorize('ADMIN') as any, async (req: AuthRequest, res: Respon
   }
 });
 
+// POST /api/users/shifts/conclude — Conclude a shift, deactivating all doctors and nurses on that shift
+router.post('/shifts/conclude', authorize('ADMIN') as any, async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const { shiftType } = req.body; // 'MORNING', 'ROTATING', 'NIGHT', or 'ALL'
+    const whereClause: any = {
+      role: { in: ['DOCTOR', 'NURSE'] },
+    };
+    if (shiftType && shiftType !== 'ALL') {
+      whereClause.shiftType = shiftType;
+    }
+
+    const updated = await prisma.user.updateMany({
+      where: whereClause,
+      data: { onDuty: false },
+    });
+
+    await createAuditLog({
+      userId: req.user?.id,
+      action: 'SHIFT_CONCLUDED',
+      resource: 'Shift',
+      detail: `Admin ${req.user?.name} concluded ${shiftType || 'ALL'} shift. ${updated.count} clinicians marked DEACTIVATED (Shift Over).`,
+      req: req as any,
+    });
+
+    res.json({ success: true, count: updated.count, shiftType: shiftType || 'ALL' });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// POST /api/users/shifts/start — Activate all doctors and nurses on a shift
+router.post('/shifts/start', authorize('ADMIN') as any, async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const { shiftType } = req.body; // 'MORNING', 'ROTATING', 'NIGHT'
+    const whereClause: any = {
+      role: { in: ['DOCTOR', 'NURSE'] },
+    };
+    if (shiftType && shiftType !== 'ALL') {
+      whereClause.shiftType = shiftType;
+    }
+
+    const updated = await prisma.user.updateMany({
+      where: whereClause,
+      data: { onDuty: true },
+    });
+
+    await createAuditLog({
+      userId: req.user?.id,
+      action: 'SHIFT_ACTIVATED',
+      resource: 'Shift',
+      detail: `Admin ${req.user?.name} activated ${shiftType || 'ALL'} shift. ${updated.count} clinicians marked ACTIVE (On-Duty).`,
+      req: req as any,
+    });
+
+    res.json({ success: true, count: updated.count, shiftType: shiftType || 'ALL' });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// PATCH /api/users/:id/shift — Reassign clinician shift, ward, and status
+router.patch('/:id/shift', authorize('ADMIN') as any, async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const { shiftType, onDuty, ward, notes } = req.body;
+    const existing = await prisma.user.findUnique({ where: { id: req.params.id } });
+    if (!existing) {
+      res.status(404).json({ error: 'Staff member not found' });
+      return;
+    }
+
+    const dataToUpdate: any = {};
+    if (shiftType !== undefined) dataToUpdate.shiftType = shiftType;
+    if (onDuty !== undefined) dataToUpdate.onDuty = Boolean(onDuty);
+    if (ward !== undefined) dataToUpdate.ward = ward;
+
+    const updated = await prisma.user.update({
+      where: { id: req.params.id },
+      data: dataToUpdate,
+      select: {
+        id: true,
+        name: true,
+        role: true,
+        staffId: true,
+        shiftType: true,
+        onDuty: true,
+        ward: true,
+        department: true,
+        title: true,
+        specialty: true,
+      },
+    });
+
+    await createAuditLog({
+      userId: req.user?.id,
+      action: 'SHIFT_REASSIGNED',
+      resource: 'User',
+      resourceId: updated.id,
+      detail: `${updated.name} (${updated.role}) shift set to ${updated.shiftType} & status ${updated.onDuty ? 'ACTIVE (On-Duty)' : 'DEACTIVATED (Shift Over)'}${notes ? ` [Handover Notes: ${notes}]` : ''}`,
+      req: req as any,
+    });
+
+    res.json(updated);
+  } catch (error) {
+    next(error);
+  }
+});
+
 // PATCH /api/users/:id/duty — Toggle clinician on-duty status
 router.patch('/:id/duty', authorize('ADMIN') as any, async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {

@@ -29,6 +29,10 @@ export const patientService = {
     api.get(`/patients/${id}/allergies`).then(r => r.data),
   addAllergy: (id: string, data: any) =>
     api.post(`/patients/${id}/allergies`, data).then(r => r.data),
+  delete: (id: string) =>
+    api.delete(`/patients/${id}`).then(r => r.data),
+  purgeAll: () =>
+    api.delete('/patients/purge/all').then(r => r.data),
 };
 
 export const prescriptionService = {
@@ -111,6 +115,12 @@ export const userService = {
   create: (data: any) => api.post('/users', data).then(r => r.data),
   update: (id: string, data: any) => api.patch(`/users/${id}`, data).then(r => r.data),
   toggleDuty: (id: string) => api.patch(`/users/${id}/duty`).then(r => r.data),
+  updateShift: (id: string, data: { shiftType?: string; onDuty?: boolean; ward?: string; notes?: string }) =>
+    api.patch(`/users/${id}/shift`, data).then(r => r.data),
+  concludeShift: (shiftType?: string) =>
+    api.post('/users/shifts/conclude', { shiftType }).then(r => r.data),
+  startShift: (shiftType: string) =>
+    api.post('/users/shifts/start', { shiftType }).then(r => r.data),
 };
 
 export const wardService = {
