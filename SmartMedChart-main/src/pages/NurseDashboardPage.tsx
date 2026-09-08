@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { dashboardService, scheduleService } from '../services/api.services';
 import { format } from 'date-fns';
-import { AlertTriangle, Clock, CheckCircle2, Timer, Activity, Plus, RefreshCw } from 'lucide-react';
+import { AlertTriangle, Clock, CheckCircle2, Timer, Activity, Plus, RefreshCw, User, ExternalLink, QrCode, Scan } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { WorkflowStepsNavBar } from '../components/WorkflowStepsNavBar';
 
@@ -30,6 +30,7 @@ function isDueNow(s: any) {
 
 export default function NurseDashboardPage() {
   const navigate = useNavigate();
+
   const { data: stats, isLoading: statsLoading, refetch: refetchStats } = useQuery({
     queryKey: ['dashboard-nurse', WARD],
     queryFn: () => dashboardService.nurse({ ward: WARD }),
@@ -96,8 +97,8 @@ export default function NurseDashboardPage() {
           <button onClick={() => refetch()} className="btn-ghost" style={{ padding: '5px 10px', fontSize: 12 }}>
             <RefreshCw size={13} /> Refresh
           </button>
-          <button onClick={() => navigate('/prescriptions/new')} className="btn-primary" style={{ padding: '6px 14px', fontSize: 12 }}>
-            <Plus size={13} /> New CPOE Rx
+          <button onClick={() => navigate('/bedside-scan')} className="btn-primary" style={{ padding: '6px 14px', fontSize: 12 }}>
+            <Activity size={13} /> Bedside Scanner
           </button>
         </div>
       </div>
@@ -113,18 +114,68 @@ export default function NurseDashboardPage() {
               <AlertTriangle size={12} color="white" />
               <span style={{ fontSize: 11, fontWeight: 800, color: 'white', textTransform: 'uppercase' }}>STAT URGENT ORDER PENDING</span>
             </div>
-            {schedules.filter(isStatUrgent).slice(0, 1).map((s: any) => (
-              <div key={s.id} style={{ flex: 1 }}>
-                <div style={{ fontSize: 16, fontWeight: 700, color: 'white' }}>{s.prescription?.medicationName}</div>
-                <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginTop: 2 }}>
-                  Patient: {s.patient?.name} (Bed {s.patient?.bed}) • {s.prescription?.route}
+            {schedules.filter(isStatUrgent).slice(0, 1).map((s: any) => {
+              const pId = s.patientId || s.patient?.id;
+              return (
+                <div key={s.id} style={{ flex: 1 }}>
+                  <div style={{ fontSize: 16, fontWeight: 700, color: 'white' }}>{s.prescription?.medicationName}</div>
+                  <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginTop: 2, display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span>Patient:</span>
+                    <button
+                      type="button"
+                      onClick={() => pId && navigate(`/patients/${pId}`)}
+                      style={{
+                        background: 'rgba(255, 255, 255, 0.12)',
+                        border: '1px solid rgba(255, 255, 255, 0.25)',
+                        borderRadius: 6,
+                        padding: '1px 8px',
+                        color: '#ffffff',
+                        fontWeight: 700,
+                        fontSize: 12,
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 4
+                      }}
+                      title="Open Patient eMAR Profile"
+                    >
+                      <User size={12} />
+                      <span>{s.patient?.name} (Bed {s.patient?.bed})</span>
+                      <ExternalLink size={10} />
+                    </button>
+                    <span>• {s.prescription?.route}</span>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
             <div style={{ display: 'flex', gap: 8 }}>
-              <button className="btn-ghost" style={{ fontSize: 12 }} onClick={() => navigate('/patients')}>View Patient eMAR</button>
-              <button className="btn-stat" style={{ fontSize: 12 }} onClick={() => navigate('/bedside-scan')}>
-                <Activity size={13} /> Verify & Administer via Bedside Scanner
+              {(() => {
+                const statItem = schedules.find(isStatUrgent);
+                const statPatientId = statItem?.patientId || statItem?.patient?.id;
+                return (
+                  <button
+                    className="btn-ghost"
+                    style={{ fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 5 }}
+                    onClick={() => statPatientId ? navigate(`/patients/${statPatientId}`) : navigate('/patients')}
+                  >
+                    <User size={13} /> View Patient eMAR Profile
+                  </button>
+                );
+              })()}
+              <button
+                className="btn-stat"
+                style={{ fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 5 }}
+                onClick={() => {
+                  const statItem = schedules.find(isStatUrgent);
+                  const statPatientId = statItem?.patientId || statItem?.patient?.id;
+                  if (statItem && statPatientId) {
+                    navigate(`/bedside-scan?scheduleId=${statItem.id}&patientId=${statPatientId}`);
+                  } else {
+                    navigate('/bedside-scan');
+                  }
+                }}
+              >
+                <QrCode size={13} /> Scan QR
               </button>
             </div>
           </div>
@@ -167,7 +218,7 @@ export default function NurseDashboardPage() {
             <div style={{ fontSize: 36, fontWeight: 800, color: stats?.delayed > 0 ? 'var(--color-due-amber)' : 'var(--color-text-primary)' }}>
               {isLoading ? '—' : (stats?.delayed ?? 0).toString().padStart(2, '0')}
             </div>
-            <div style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>Radiology Hold · ICU-08 & 03</div>
+            <div style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>Radiology Hold · ICU-08 &amp; 03</div>
           </div>
 
           <div className="stat-card stat-urgent">
@@ -192,10 +243,10 @@ export default function NurseDashboardPage() {
           <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--color-border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div>
               <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: 'var(--color-text-primary)' }}>Ward 4B Active Medication Administration Schedule</h2>
-              <p style={{ margin: '4px 0 0', fontSize: 12, color: 'var(--color-text-muted)' }}>Live bedside dispensing timeline · Current Shift 07:00–15:00</p>
+              <p style={{ margin: '4px 0 0', fontSize: 12, color: 'var(--color-text-muted)' }}>Live bedside dispensing timeline · Current Shift 07:00–15:00 · Click any patient name or 'Patient Profile' to open eMAR chart</p>
             </div>
-            <button onClick={() => navigate('/prescriptions/new')} className="btn-primary" style={{ fontSize: 12 }}>
-              <Plus size={13} /> New CPOE Rx
+            <button onClick={() => navigate('/bedside-scan')} className="btn-primary" style={{ fontSize: 12 }}>
+              <Activity size={13} /> Bedside 4-Pt Scanner
             </button>
           </div>
 
@@ -210,6 +261,8 @@ export default function NurseDashboardPage() {
               const stat = isStatUrgent(s);
               const dueNow = isDueNow(s);
               const rowClass = stat ? 'stat-urgent' : dueNow ? 'due-now' : s.status === 'GIVEN' ? 'given' : s.status === 'HELD' || s.status === 'DELAYED' ? 'held' : '';
+              const patientId = s.patientId || s.patient?.id;
+
               return (
                 <div key={s.id} className={`schedule-row ${rowClass}`}>
                   <div>
@@ -220,6 +273,7 @@ export default function NurseDashboardPage() {
                       {s.status === 'GIVEN' ? 'GIVEN' : dueNow ? 'DUE NOW' : s.status === 'DELAYED' ? `DELAYED +${s.delayMinutes}M` : s.status === 'HELD' ? 'ON HOLD' : 'UPCOMING'}
                     </div>
                   </div>
+
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
                       <span style={{ fontWeight: 600, fontSize: 14, color: 'var(--color-text-primary)' }}>{s.prescription?.medicationName}</span>
@@ -229,12 +283,53 @@ export default function NurseDashboardPage() {
                       {s.status === 'DELAYED' && <span className="chip chip-delayed">DELAYED</span>}
                       {s.status === 'HELD' && <span className="chip chip-held">ON HOLD</span>}
                     </div>
-                    <div style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>
-                      Pt: {s.patient?.name} (Bed {s.patient?.bed}) · {s.prescription?.route}
-                      {s.prescription?.prescriber && ` · Dr. ${s.prescription.prescriber.name}`}
+
+                    <div style={{ fontSize: 12, color: 'var(--color-text-muted)', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                      <span style={{ color: 'var(--color-text-muted)' }}>Pt:</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (patientId) navigate(`/patients/${patientId}`);
+                        }}
+                        style={{
+                          background: 'rgba(11, 77, 162, 0.08)',
+                          border: '1px solid rgba(11, 77, 162, 0.25)',
+                          borderRadius: 6,
+                          padding: '2px 8px',
+                          color: 'var(--color-accent-blue-light)',
+                          fontWeight: 700,
+                          fontSize: 12,
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: 4,
+                          transition: 'all 0.15s ease'
+                        }}
+                        onMouseOver={(e) => {
+                          e.currentTarget.style.background = 'rgba(11, 77, 162, 0.2)';
+                          e.currentTarget.style.borderColor = 'var(--color-accent-blue)';
+                        }}
+                        onMouseOut={(e) => {
+                          e.currentTarget.style.background = 'rgba(11, 77, 162, 0.08)';
+                          e.currentTarget.style.borderColor = 'rgba(11, 77, 162, 0.25)';
+                        }}
+                        title={`Open full eMAR profile for ${s.patient?.name || 'Patient'}`}
+                      >
+                        <User size={12} />
+                        <span>{s.patient?.name} (Bed {s.patient?.bed})</span>
+                        <ExternalLink size={10} />
+                      </button>
+
+                      <span>· {s.prescription?.route}</span>
+                      {s.prescription?.prescriber && (
+                        <span>
+                          · {s.prescription.prescriber.name.startsWith('Dr.') ? s.prescription.prescriber.name : `Dr. ${s.prescription.prescriber.name}`}
+                        </span>
+                      )}
                     </div>
+
                     {s.administrationRecord && (
-                      <div style={{ fontSize: 11, color: 'var(--color-given-green)', marginTop: 2 }}>
+                      <div style={{ fontSize: 11, color: 'var(--color-given-green)', marginTop: 3 }}>
                         Signed: {s.administeredBy?.name} at {format(new Date(s.administeredAt), 'HH:mm')}
                         {s.administrationRecord?.barcodeScanned && ' · Verified by 4-Pt Barcode'}
                         {s.administrationRecord?.adminId && ` · Admin ID: ${s.administrationRecord.adminId}`}
@@ -246,13 +341,43 @@ export default function NurseDashboardPage() {
                       </div>
                     )}
                   </div>
-                  <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                     {s.administrationRecord && (
                       <span style={{ fontSize: 11, color: 'var(--color-given-green)', fontWeight: 600 }}>100% Safe Match</span>
                     )}
+
+                    {/* Open Patient Profile Button */}
+                    <button
+                      type="button"
+                      className="btn-ghost"
+                      style={{
+                        fontSize: 11,
+                        padding: '6px 10px',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 5,
+                        border: '1px solid var(--color-border)',
+                        borderRadius: 6,
+                        color: 'var(--color-accent-blue-light)',
+                        cursor: 'pointer'
+                      }}
+                      onClick={() => {
+                        if (patientId) navigate(`/patients/${patientId}`);
+                      }}
+                      title="Open Full Patient eMAR Profile & Chart"
+                    >
+                      <User size={12} />
+                      <span>Patient Profile</span>
+                    </button>
+
                     {(stat || dueNow) && s.status === 'PENDING' && (
-                      <button className="btn-primary" style={{ fontSize: 12 }} onClick={() => navigate(`/bedside-scan?scheduleId=${s.id}`)}>
-                        <Activity size={13} /> Administer
+                      <button
+                        className="btn-primary"
+                        style={{ fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 5 }}
+                        onClick={() => navigate(`/bedside-scan?scheduleId=${s.id}&patientId=${patientId}`)}
+                      >
+                        <QrCode size={13} /> Scan QR
                       </button>
                     )}
                     {s.status === 'DELAYED' && (

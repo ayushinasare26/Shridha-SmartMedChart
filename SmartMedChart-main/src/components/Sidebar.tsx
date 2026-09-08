@@ -23,7 +23,6 @@ const NAV_DOCTOR: Array<{ to: string; label: string; icon: any; badge?: string }
 const NAV_NURSE: Array<{ to: string; label: string; icon: any; badge?: string }> = [
   { to: '/nurse', label: 'Overview & Schedule', icon: LayoutDashboard, badge: '42' },
   { to: '/patients', label: 'Patient eMAR', icon: Activity, badge: 'ICU-12' },
-  { to: '/prescriptions', label: 'CPOE Prescriptions', icon: FileText, badge: 'STAT' },
   { to: '/bedside-scan', label: 'Bedside 4-Pt Scanner', icon: Scan },
   { to: '/safety-audit', label: 'Safety, AI & Audit', icon: Shield },
 ];

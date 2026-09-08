@@ -59,7 +59,9 @@ export default function DoctorDashboardPage() {
             <span className="chip chip-stat"><AlertTriangle size={11} /> {stats.criticalAlerts} Critical STAT</span>
           )}
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <div style={{ width: 30, height: 30, borderRadius: '50%', background: '#3b82f6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, color: 'white' }}>DS</div>
+            <div style={{ width: 30, height: 30, borderRadius: '50%', background: '#3b82f6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, color: 'white' }}>
+              {(user?.name || 'Dr').split(' ').filter(n => !['Dr.', 'MD', 'RN', 'MBA', 'PhD', 'Pharm.'].includes(n)).map(w => w[0]).join('').slice(0, 2).toUpperCase() || (user?.name || 'DS').slice(0, 2).toUpperCase()}
+            </div>
             <div>
               <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-text-primary)' }}>{user?.name}</div>
               <div style={{ fontSize: 10, color: 'var(--color-text-muted)' }}>Attending Intensivist</div>

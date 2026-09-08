@@ -8,6 +8,8 @@ export function WorkflowStepsNavBar() {
 
   const overviewPath = user?.role === 'DOCTOR' ? '/doctor' : '/nurse';
 
+  const isNurse = user?.role === 'NURSE';
+
   const steps = [
     {
       id: 'dashboard',
@@ -23,23 +25,23 @@ export function WorkflowStepsNavBar() {
       path: '/patients',
       isActive: location.pathname.startsWith('/patients'),
     },
-    {
+    ...(!isNurse ? [{
       id: 'cpoe',
       num: 3,
       label: 'CPOE Prescription Form',
       path: '/prescriptions/new',
       isActive: location.pathname.startsWith('/prescriptions'),
-    },
+    }] : []),
     {
       id: 'safety',
-      num: 4,
+      num: isNurse ? 3 : 4,
       label: 'Allergy Safety Alert',
       path: '/safety-audit',
       isActive: location.pathname === '/safety-audit',
     },
     {
       id: 'qr',
-      num: 5,
+      num: isNurse ? 4 : 5,
       label: 'QR Code Verification',
       path: '/bedside-scan',
       isActive: location.pathname === '/bedside-scan' || location.pathname.startsWith('/verify'),

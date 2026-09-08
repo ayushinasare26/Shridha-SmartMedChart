@@ -6,6 +6,7 @@ import { format, differenceInMinutes } from 'date-fns';
 import { AlertTriangle, CheckCircle2, Clock, Scan, Shield, FileText, Activity, ChevronLeft, PhoneCall, QrCode } from 'lucide-react';
 import { HospitalPersonQRModal } from '../components/HospitalPersonQRModal';
 import { WorkflowStepsNavBar } from '../components/WorkflowStepsNavBar';
+import { useAuth } from '../hooks/useAuth';
 
 function getStatusChip(status: string) {
   const map: Record<string, { bg: string; color: string; label: string }> = {
@@ -27,6 +28,7 @@ function getStatusChip(status: string) {
 export default function PatientEMARPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [showQRModal, setShowQRModal] = useState(false);
 
   const { data: patient, isLoading: patientLoading, refetch: refetchPatient } = useQuery({
@@ -168,28 +170,30 @@ export default function PatientEMARPage() {
           </div>
         </div>
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, alignItems: 'center' }}>
-          <button
-            onClick={() => setShowQRModal(true)}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 6,
-              padding: '8px 14px',
-              backgroundColor: 'rgba(56, 189, 248, 0.15)',
-              color: '#38bdf8',
-              border: '1px solid rgba(56, 189, 248, 0.35)',
-              borderRadius: 8,
-              fontSize: 12,
-              fontWeight: 700,
-              cursor: 'pointer',
-              transition: 'all 0.15s'
-            }}
-            onMouseOver={(e) => (e.currentTarget.style.backgroundColor = 'rgba(56, 189, 248, 0.25)')}
-            onMouseOut={(e) => (e.currentTarget.style.backgroundColor = 'rgba(56, 189, 248, 0.15)')}
-          >
-            <QrCode size={14} />
-            <span>Digital Wristband &amp; QR</span>
-          </button>
+          {user?.role !== 'NURSE' && (
+            <button
+              onClick={() => setShowQRModal(true)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+                padding: '8px 14px',
+                backgroundColor: 'rgba(56, 189, 248, 0.15)',
+                color: '#38bdf8',
+                border: '1px solid rgba(56, 189, 248, 0.35)',
+                borderRadius: 8,
+                fontSize: 12,
+                fontWeight: 700,
+                cursor: 'pointer',
+                transition: 'all 0.15s'
+              }}
+              onMouseOver={(e) => (e.currentTarget.style.backgroundColor = 'rgba(56, 189, 248, 0.25)')}
+              onMouseOut={(e) => (e.currentTarget.style.backgroundColor = 'rgba(56, 189, 248, 0.15)')}
+            >
+              <QrCode size={14} />
+              <span>Digital Wristband &amp; QR</span>
+            </button>
+          )}
           <button
             onClick={() => navigate(`/bedside-scan?patientId=${patient.id}`)}
             style={{
@@ -234,7 +238,7 @@ export default function PatientEMARPage() {
         {/* Action Tabs */}
         <div style={{ display: 'flex', gap: 8, marginBottom: 20, background: 'var(--color-bg-card)', border: '1px solid var(--color-border)', borderRadius: 8, padding: 6 }}>
           {[
-            { label: 'Administer Bedside Scan', icon: Scan, primary: true },
+            { label: 'Scan QR', icon: QrCode, primary: true },
             { label: 'Co-Sign High Alert', icon: Shield },
             { label: 'Document Delay / Hold Reason', icon: Clock },
             { label: 'Medication History Log', icon: FileText },

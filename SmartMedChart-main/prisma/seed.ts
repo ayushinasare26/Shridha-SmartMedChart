@@ -67,11 +67,11 @@ async function main() {
   // ═══════════════ USERS & HOSPITAL PERSONNEL ═══════════════
   const passwordHash = await bcrypt.hash('SmartMed@2024', 12);
 
-  // 1. Dr. Evelyn Vance, MD — Lead Hospital Administrator
+  // 1. Dr. Rohit Verma, MD — Lead Hospital Administrator
   const adminVance = await prisma.user.create({
     data: {
-      email: 'evelyn.vance@metrohealth.org',
-      name: 'Dr. Evelyn Vance, MD',
+      email: 'rohit.verma@metrohealth.org',
+      name: 'Dr. Rohit Verma, MD',
       role: 'ADMIN',
       passwordHash,
       staffId: 'ADM-9001',
@@ -82,15 +82,15 @@ async function main() {
       licenseNumber: 'MD-ADM-9001',
       shiftType: 'MORNING',
       onDuty: true,
-      avatarUrl: 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=150&auto=format&fit=crop&q=80',
+      avatarUrl: 'https://images.unsplash.com/photo-1622253692010-333f2da6031d?w=150&auto=format&fit=crop&q=80',
     },
   });
 
-  // 2. Arthur Hastings, MBA — Director of Hospital Operations
+  // 2. Manashvi Dok, MBA — Director of Hospital Operations
   const adminHastings = await prisma.user.create({
     data: {
-      email: 'arthur.hastings@metrohealth.org',
-      name: 'Arthur Hastings, MBA',
+      email: 'manashvi.dok@metrohealth.org',
+      name: 'Manashvi Dok, MBA',
       role: 'ADMIN',
       passwordHash,
       staffId: 'ADM-1002',
@@ -101,7 +101,7 @@ async function main() {
       licenseNumber: 'HOSP-OPS-44102',
       shiftType: 'MORNING',
       onDuty: false,
-      avatarUrl: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=150&auto=format&fit=crop&q=80',
+      avatarUrl: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80',
     },
   });
 
@@ -405,9 +405,9 @@ async function main() {
   const georgeMatthews = await prisma.patient.create({
     data: {
       mrn: '94023-08',
-      name: 'George Matthews',
+      name: 'sunita maske',
       dob: new Date('1965-11-05'),
-      sex: 'Male',
+      sex: 'Female',
       weight: 89.2,
       wardId: ward4B.id,
       bed: 'ICU-08',
