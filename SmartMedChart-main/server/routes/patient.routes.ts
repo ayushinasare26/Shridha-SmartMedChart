@@ -13,5 +13,7 @@ router.post('/', authorize('DOCTOR', 'ADMIN') as any, patientController.createPa
 router.patch('/:id', authorize('DOCTOR', 'NURSE', 'ADMIN', 'PATIENT') as any, patientController.updatePatient);
 router.get('/:id/allergies', patientController.getPatientAllergies);
 router.post('/:id/allergies', authorize('DOCTOR', 'PHARMACIST') as any, patientController.addAllergy);
+router.delete('/purge/all', authorize('ADMIN') as any, patientController.purgeAllPatients);
+router.delete('/:id', authorize('ADMIN', 'DOCTOR') as any, patientController.deletePatient);
 
 export default router;

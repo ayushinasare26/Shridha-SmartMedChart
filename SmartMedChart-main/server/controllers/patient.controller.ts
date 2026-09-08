@@ -124,16 +124,105 @@ export const getPatient = async (req: AuthRequest, res: Response, next: NextFunc
 
 export const createPatient = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const patient = await prisma.patient.create({ data: req.body });
+    const {
+      name,
+      mrn,
+      dob,
+      sex,
+      weight,
+      weightUnit,
+      bed,
+      admissionDiagnosis,
+      codeStatus,
+      npoStatus,
+      isolationStatus,
+      status,
+      wardId,
+      wardUnit,
+      allergy,
+      emergencyContactName,
+      emergencyContactRelation,
+      emergencyContactPhone,
+    } = req.body;
+
+    if (!name || !mrn) {
+      res.status(400).json({ error: 'Patient name and MRN are required.' });
+      return;
+    }
+
+    // Check duplicate MRN
+    const existingPatient = await prisma.patient.findUnique({ where: { mrn } });
+    if (existingPatient) {
+      res.status(400).json({ error: `A patient with MRN ${mrn} is already admitted (${existingPatient.name}).` });
+      return;
+    }
+
+    // Find ward if wardId not provided
+    let targetWardId = wardId;
+    if (!targetWardId) {
+      const defaultWard = await prisma.ward.findFirst({
+        where: { unit: wardUnit || 'WARD-4B-ICU' }
+      });
+      if (defaultWard) {
+        targetWardId = defaultWard.id;
+      }
+    }
+
+    // Parse DOB to Date
+    const parsedDob = dob ? new Date(dob) : new Date('1980-01-01');
+
+    // Create patient
+    const patient = await prisma.patient.create({
+      data: {
+        name,
+        mrn,
+        dob: parsedDob,
+        sex: sex || 'Male',
+        weight: typeof weight === 'number' ? weight : (parseFloat(weight) || 72),
+        weightUnit: weightUnit || 'kg',
+        bed: bed || 'ICU-15',
+        admissionDiagnosis: admissionDiagnosis || 'Acute Inpatient Care',
+        codeStatus: codeStatus || 'Full',
+        npoStatus: Boolean(npoStatus),
+        isolationStatus: Boolean(isolationStatus),
+        status: status || 'ACTIVE',
+        ...(targetWardId && { wardId: targetWardId }),
+        ...(emergencyContactName && { emergencyContactName }),
+        ...(emergencyContactRelation && { emergencyContactRelation }),
+        ...(emergencyContactPhone && { emergencyContactPhone }),
+      },
+    });
+
+    // If an allergy was specified and not NKDA, add it
+    if (allergy && typeof allergy === 'string' && !allergy.toUpperCase().includes('NKDA') && !allergy.toUpperCase().includes('NO KNOWN')) {
+      await prisma.allergy.create({
+        data: {
+          patientId: patient.id,
+          allergen: allergy,
+          severity: 'Moderate',
+          reaction: 'Documented on admission',
+        }
+      }).catch(() => {});
+    }
+
+    // Update ward occupancy if wardId present
+    if (targetWardId) {
+      await prisma.ward.update({
+        where: { id: targetWardId },
+        data: { occupancy: { increment: 1 } },
+      }).catch(() => {});
+    }
+
     await createAuditLog({
       userId: req.user?.id,
       patientId: patient.id,
       action: 'PATIENT_CREATED',
       resource: 'Patient',
       resourceId: patient.id,
-      detail: `Patient ${patient.name} (MRN: ${patient.mrn}) admitted`,
+      detail: `Patient ${patient.name} (MRN: ${patient.mrn}, Bed: ${patient.bed}) admitted`,
       req: req as any,
     });
+
     res.status(201).json(patient);
   } catch (error) { next(error); }
 };
@@ -209,3 +298,70 @@ export const addAllergy = async (req: AuthRequest, res: Response, next: NextFunc
     res.status(201).json(allergy);
   } catch (error) { next(error); }
 };
+
+export const deletePatient = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const patient = await prisma.patient.findUnique({ where: { id } });
+    if (!patient) {
+      res.status(404).json({ error: 'Patient not found' });
+      return;
+    }
+
+    await prisma.$transaction(async (tx) => {
+      await tx.administrationRecord.deleteMany({ where: { patientId: id } });
+      await tx.medicationSchedule.deleteMany({ where: { patientId: id } });
+      await tx.safetyAlert.deleteMany({ where: { patientId: id } });
+      await tx.prescription.deleteMany({ where: { patientId: id } });
+      await tx.allergy.deleteMany({ where: { patientId: id } });
+      await tx.notification.deleteMany({ where: { patientId: id } });
+      await tx.auditLog.updateMany({ where: { patientId: id }, data: { patientId: null } });
+      if (patient.wardId) {
+        await tx.ward.update({
+          where: { id: patient.wardId },
+          data: { occupancy: { decrement: 1 } },
+        }).catch(() => {});
+      }
+      await tx.patient.delete({ where: { id } });
+    });
+
+    await createAuditLog({
+      userId: req.user?.id,
+      action: 'PATIENT_DISCHARGED_REMOVED',
+      resource: 'Patient',
+      resourceId: id,
+      detail: `Patient ${patient.name} (MRN: ${patient.mrn}, Bed: ${patient.bed || 'N/A'}) discharged and removed from system`,
+      req: req as any,
+    });
+
+    res.json({ message: `Patient ${patient.name} successfully removed.`, id });
+  } catch (error) { next(error); }
+};
+
+export const purgeAllPatients = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    await prisma.$transaction(async (tx) => {
+      await tx.administrationRecord.deleteMany();
+      await tx.medicationSchedule.deleteMany();
+      await tx.safetyAlert.deleteMany();
+      await tx.prescription.deleteMany();
+      await tx.allergy.deleteMany();
+      await tx.notification.deleteMany();
+      await tx.auditLog.updateMany({ data: { patientId: null } });
+      await tx.patient.deleteMany();
+      await tx.ward.updateMany({ data: { occupancy: 0 } });
+    });
+
+    await createAuditLog({
+      userId: req.user?.id,
+      action: 'ALL_PATIENTS_PURGED',
+      resource: 'Patient',
+      detail: 'All test/dummy patients purged by administrator for real clinical data testing',
+      req: req as any,
+      severity: 'Warning',
+    });
+
+    res.json({ message: 'All dummy patient data has been purged. All beds are now available.' });
+  } catch (error) { next(error); }
+};
+
