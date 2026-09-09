@@ -2,16 +2,16 @@ import { Doctor, Patient, ConsultationLog, CaseFile } from '../types';
 
 export const INITIAL_DOCTORS: Doctor[] = [
   {
-    id: 'doc-sharma',
-    name: 'Dr. Rajesh Sharma',
+    id: 'doc-84729-sharma',
+    name: 'Dr. Sharma, MD',
     title: 'MD, DM (Cardiology), FACC',
     department: 'Cardiology',
     roomNumber: 'OPD Room 104 - Wing B',
     opdHours: '08:30 - 15:30',
     status: 'available',
     currentQueueCount: 3,
-    qualifications: 'Senior Interventional Cardiologist',
-    avatarInitials: 'RS',
+    qualifications: 'Senior Interventional Cardiologist & Attending Intensivist',
+    avatarInitials: 'DS',
     experienceYears: 18,
   },
   {

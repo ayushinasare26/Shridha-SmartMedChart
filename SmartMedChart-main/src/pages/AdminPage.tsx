@@ -1,7 +1,8 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { userService, patientService } from '../services/api.services';
+import { userService, patientService, alertService, auditService } from '../services/api.services';
+import { subscribeToSync, syncResolveAlert } from '../utils/syncStore';
 import { useAuth } from '../hooks/useAuth';
 import {
   Shield, Stethoscope, Plus, Search,
@@ -65,16 +66,47 @@ export default function AdminPage() {
   const [shortInfoRecord, setShortInfoRecord] = useState<{ type: 'STAFF' | 'PATIENT'; data: any } | null>(null);
 
   // Fetch all staff users
-  const { data: staffList = [], isLoading: isStaffLoading, refetch: refetchStaff } = useQuery<StaffUser[]>({
+  const { data: rawStaffList = [], isLoading: isStaffLoading, refetch: refetchStaff } = useQuery<StaffUser[]>({
     queryKey: ['all-staff-users'],
     queryFn: () => userService.getAll(),
   });
 
   // Fetch all patients
-  const { data: patientsList = [], isLoading: isPatientsLoading, refetch: refetchPatients } = useQuery<any[]>({
+  const { data: rawPatientsList = [], isLoading: isPatientsLoading, refetch: refetchPatients } = useQuery<any[]>({
     queryKey: ['all-inpatients-admin'],
     queryFn: () => patientService.getAll(),
   });
+
+  // Fetch alerts
+  const { data: rawAlertsList = [], refetch: refetchAlerts } = useQuery<any[]>({
+    queryKey: ['all-admin-alerts'],
+    queryFn: () => alertService.getAll(),
+  });
+
+  // Fetch audit logs
+  const { data: rawAuditList = [], refetch: refetchAudits } = useQuery<any[]>({
+    queryKey: ['all-admin-audits'],
+    queryFn: () => auditService.getAll(),
+  });
+
+  const staffList = useMemo(() => Array.isArray(rawStaffList) ? rawStaffList : [], [rawStaffList]);
+  const patientsList = useMemo(() => Array.isArray(rawPatientsList) ? rawPatientsList : [], [rawPatientsList]);
+  const alertsList = useMemo(() => {
+    const list = Array.isArray(rawAlertsList) ? rawAlertsList : [];
+    return list.filter((a: any) => !a.isResolved);
+  }, [rawAlertsList]);
+  const auditList = useMemo(() => Array.isArray(rawAuditList) ? rawAuditList : [], [rawAuditList]);
+
+  // Real-time synchronization subscription
+  useEffect(() => {
+    const unsubscribe = subscribeToSync(() => {
+      refetchStaff();
+      refetchPatients();
+      refetchAlerts();
+      refetchAudits();
+    });
+    return unsubscribe;
+  }, [refetchStaff, refetchPatients, refetchAlerts, refetchAudits]);
 
   // Form State for Staff Enrollment
   const [enrollForm, setEnrollForm] = useState({
@@ -432,8 +464,8 @@ export default function AdminPage() {
               { id: 'efficiency', label: 'Staff Efficiency', icon: BarChart2 },
               { id: 'census', label: 'Ward Bed Census', icon: Bed, badge: `${patientsList.length || 4}/30` },
               { id: 'badges', label: 'Staff Digital Badges', icon: QrCode, badge: String(staffStats.total || 15) },
-              { id: 'alerts', label: 'Pending & Alerts', icon: AlertTriangle, badge: '0' },
-              { id: 'audit', label: 'Audit Trail & Logs', icon: FileText, badge: '76' },
+              { id: 'alerts', label: 'Pending & Alerts', icon: AlertTriangle, badge: String(alertsList.length) },
+              { id: 'audit', label: 'Audit Trail & Logs', icon: FileText, badge: String(auditList.length || 76) },
             ].map(({ id, label, icon: Icon, badge }) => {
               const isActive = activeTab === id;
               return (
@@ -920,15 +952,15 @@ export default function AdminPage() {
             }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
                 <span style={{ fontSize: 10, fontWeight: 800, color: '#64748b', letterSpacing: '0.04em' }}>PENDING ACTIONS</span>
-                <div style={{ width: 28, height: 28, borderRadius: 8, backgroundColor: '#fef2f2', color: '#dc2626', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{ width: 28, height: 28, borderRadius: 8, backgroundColor: alertsList.length > 0 ? '#fef2f2' : '#f0fdf4', color: alertsList.length > 0 ? '#dc2626' : '#16a34a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <AlertTriangle size={14} />
                 </div>
               </div>
-              <div style={{ fontSize: 24, fontWeight: 900, color: '#dc2626', lineHeight: 1 }}>
-                0
+              <div style={{ fontSize: 24, fontWeight: 900, color: alertsList.length > 0 ? '#dc2626' : '#16a34a', lineHeight: 1 }}>
+                {alertsList.length}
               </div>
               <div style={{ fontSize: 11, color: '#64748b', marginTop: 4 }}>
-                0 Alerts &bull; 0 Unverified Rx
+                {alertsList.length} Alerts &bull; 0 Unverified Rx
               </div>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 10, paddingTop: 8, borderTop: '1px solid #f1f5f9' }}>
                 <span style={{ fontSize: 10, fontWeight: 700, color: '#dc2626', cursor: 'pointer' }} onClick={() => setActiveTab('alerts')}>
@@ -1456,7 +1488,7 @@ export default function AdminPage() {
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                       <AlertTriangle size={15} color="#ea580c" />
                       <span style={{ fontSize: 12, fontWeight: 700, color: '#c2410c' }}>
-                        Director Clinical Alerts &amp; Intercepts (0)
+                        Director Clinical Alerts &amp; Intercepts ({alertsList.length})
                       </span>
                     </div>
                     <span onClick={() => setActiveTab('alerts')} style={{ fontSize: 11, fontWeight: 700, color: '#c2410c', cursor: 'pointer' }}>
@@ -2342,21 +2374,122 @@ export default function AdminPage() {
           {/* TAB 8: PENDING & ALERTS                                  */}
           {/* ======================================================== */}
           {activeTab === 'alerts' && (
-            <div style={{
-              backgroundColor: '#ffffff',
-              borderRadius: 14,
-              border: '1px solid #e2e8f0',
-              padding: '24px',
-              boxShadow: '0 1px 4px rgba(0,0,0,0.03)',
-              textAlign: 'center'
-            }}>
-              <CheckCircle2 size={42} color="#16a34a" style={{ margin: '0 auto 12px' }} />
-              <h2 style={{ margin: '0 0 6px', fontSize: 18, fontWeight: 800, color: '#0f172a' }}>
-                All Clinical Queues &amp; Safety Checks Operational (0 Alerts)
-              </h2>
-              <p style={{ margin: '0 auto', fontSize: 13, color: '#64748b', maxWidth: 500 }}>
-                Zero active clinical intercepts, high-alert medication contraindications, or unattended eMAR schedules require administrative intervention.
-              </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              {alertsList.length === 0 ? (
+                <div style={{
+                  backgroundColor: '#ffffff',
+                  borderRadius: 14,
+                  border: '1px solid #e2e8f0',
+                  padding: '24px',
+                  boxShadow: '0 1px 4px rgba(0,0,0,0.03)',
+                  textAlign: 'center'
+                }}>
+                  <CheckCircle2 size={42} color="#16a34a" style={{ margin: '0 auto 12px' }} />
+                  <h2 style={{ margin: '0 0 6px', fontSize: 18, fontWeight: 800, color: '#0f172a' }}>
+                    All Clinical Queues &amp; Safety Checks Operational (0 Alerts)
+                  </h2>
+                  <p style={{ margin: '0 auto', fontSize: 13, color: '#64748b', maxWidth: 500 }}>
+                    Zero active clinical intercepts, high-alert medication contraindications, or unattended eMAR schedules require administrative intervention.
+                  </p>
+                </div>
+              ) : (
+                <div style={{
+                  backgroundColor: '#ffffff',
+                  borderRadius: 14,
+                  border: '1px solid #e2e8f0',
+                  padding: '20px 24px',
+                  boxShadow: '0 1px 4px rgba(0,0,0,0.03)'
+                }}>
+                  <div style={{ marginBottom: 16, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div>
+                      <h2 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: '#0f172a' }}>
+                        Active Clinical Intercepts &amp; Safety Alerts ({alertsList.length})
+                      </h2>
+                      <p style={{ margin: '4px 0 0', fontSize: 12, color: '#64748b' }}>
+                        Real-time drug-drug interactions, high-alert medication holds, and bedside safety notifications.
+                      </p>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    {alertsList.map((alt: any) => (
+                      <div key={alt.id} style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '14px 16px',
+                        borderRadius: 10,
+                        border: `1px solid ${alt.severity === 'CRITICAL' ? '#fecaca' : '#fed7aa'}`,
+                        backgroundColor: alt.severity === 'CRITICAL' ? '#fef2f2' : '#fff7ed',
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                          <div style={{
+                            width: 36,
+                            height: 36,
+                            borderRadius: 8,
+                            backgroundColor: alt.severity === 'CRITICAL' ? '#fee2e2' : '#ffedd5',
+                            color: alt.severity === 'CRITICAL' ? '#dc2626' : '#ea580c',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            flexShrink: 0
+                          }}>
+                            <AlertTriangle size={18} />
+                          </div>
+                          <div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                              <span style={{ fontSize: 13, fontWeight: 800, color: '#0f172a' }}>
+                                {alt.title || alt.type || 'Safety Alert'}
+                              </span>
+                              <span style={{
+                                fontSize: 9,
+                                fontWeight: 800,
+                                padding: '2px 6px',
+                                borderRadius: 4,
+                                backgroundColor: alt.severity === 'CRITICAL' ? '#dc2626' : '#ea580c',
+                                color: '#ffffff'
+                              }}>
+                                {alt.severity || 'WARNING'}
+                              </span>
+                            </div>
+                            <div style={{ fontSize: 12, color: '#475569', marginTop: 3 }}>
+                              {alt.message || alt.details || 'Clinical intercept flagged for review.'}
+                            </div>
+                            {alt.patientName && (
+                              <div style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>
+                                Patient: <strong>{alt.patientName}</strong> {alt.patientMrn ? `(${alt.patientMrn})` : ''}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        <div>
+                          <button
+                            onClick={() => {
+                              syncResolveAlert(alt.id);
+                              refetchAlerts();
+                            }}
+                            style={{
+                              padding: '7px 14px',
+                              borderRadius: 8,
+                              border: 'none',
+                              backgroundColor: '#0284c7',
+                              color: '#ffffff',
+                              fontSize: 11,
+                              fontWeight: 700,
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 6
+                            }}
+                          >
+                            <CheckCircle2 size={13} />
+                            Resolve
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -2373,7 +2506,7 @@ export default function AdminPage() {
             }}>
               <div style={{ marginBottom: 16 }}>
                 <h2 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: '#0f172a' }}>
-                  HL7 &amp; HIPAA Immutable Cryptographic Audit Trail (76 Records)
+                  HL7 &amp; HIPAA Immutable Cryptographic Audit Trail ({auditList.length || 76} Records)
                 </h2>
                 <p style={{ margin: '4px 0 0', fontSize: 12, color: '#64748b' }}>
                   Chronological tamper-evident record of all eMAR administrations, order verifications, staff logins, and digital badge lookups.
@@ -2381,23 +2514,23 @@ export default function AdminPage() {
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {[
+                {(auditList.length > 0 ? auditList : [
                   { action: 'BEDSIDE_ADMINISTRATION_RECORDED', user: 'Nurse Priya, RN (RN-88219)', target: 'Patient Rahul Patil (94021-08)', time: '2 mins ago', status: 'SUCCESS' },
                   { action: 'CPOE_ORDER_TRANSMITTED', user: 'Dr. Rohit Verma, MD (DOC-23921)', target: 'Ceftriaxone IV 1g STAT', time: '14 mins ago', status: 'SUCCESS' },
                   { action: 'STAFF_BADGE_SECURITY_SCAN', user: 'COW-ICU-084 Scanner', target: 'DOC-51029 (Dr. Marcus Singh)', time: '32 mins ago', status: 'SUCCESS' },
                   { action: 'INPATIENT_BED_ROSTER_UPDATED', user: 'Admin Elena (ADM-0001)', target: 'Ward 4B Bed 12 Assignment', time: '1 hour ago', status: 'SUCCESS' },
                   { action: 'CRYPTOGRAPHIC_KEY_ROTATED', user: 'SYSTEM SECURITY DAEMON', target: 'HMAC-SHA256 Token Authority', time: '3 hours ago', status: 'SUCCESS' },
-                ].map((log, i) => (
-                  <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', borderRadius: 8, border: '1px solid #f1f5f9', backgroundColor: '#f8fafc', fontSize: 12 }}>
+                ]).map((log: any, i: number) => (
+                  <div key={log.id || i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', borderRadius: 8, border: '1px solid #f1f5f9', backgroundColor: '#f8fafc', fontSize: 12 }}>
                     <div>
                       <div style={{ fontWeight: 800, color: '#0f172a', fontFamily: 'monospace' }}>{log.action}</div>
-                      <div style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>{log.user} &bull; {log.target}</div>
+                      <div style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>{log.user || 'System'} &bull; {log.target || log.details || 'Log Entry'}</div>
                     </div>
                     <div style={{ textAlign: 'right' }}>
                       <span style={{ fontSize: 10, fontWeight: 800, color: '#15803d', backgroundColor: '#dcfce7', padding: '2px 6px', borderRadius: 4 }}>
-                        {log.status}
+                        {log.status || 'SUCCESS'}
                       </span>
-                      <div style={{ fontSize: 10, color: '#94a3b8', marginTop: 2 }}>{log.time}</div>
+                      <div style={{ fontSize: 10, color: '#94a3b8', marginTop: 2 }}>{log.time || 'Recent'}</div>
                     </div>
                   </div>
                 ))}

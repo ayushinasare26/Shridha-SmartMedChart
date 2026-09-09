@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import jsQR from 'jsqr';
 import { generateQRCodeDataUrl } from '../receptionist/utils/qrHelper';
+import { getSyncedPatients } from '../utils/syncStore';
 import {
   Shield, QrCode, Camera, RefreshCw, Search, Phone, Copy, Check,
   CheckCircle2, LogOut, ArrowRight, User, Heart, Stethoscope,
@@ -221,7 +222,7 @@ export default function HospitalStaffPortalPage() {
     // Normalize
     const clean = targetMrn.replace(/^MRN[:\-\s]*/i, '').trim();
 
-    // Match patient
+    // Match patient from KNOWN_PATIENTS or synced patients
     let matchedPatient = KNOWN_PATIENTS[clean];
     if (!matchedPatient) {
       // Check if partial or known key
@@ -232,6 +233,44 @@ export default function HospitalStaffPortalPage() {
         rawText.toLowerCase().includes(KNOWN_PATIENTS[k].bed.toLowerCase())
       );
       if (key) matchedPatient = KNOWN_PATIENTS[key];
+    }
+
+    if (!matchedPatient) {
+      const allSynced = getSyncedPatients();
+      const found = allSynced.find(p =>
+        p.mrn === clean ||
+        p.id === clean ||
+        clean.includes(p.mrn) ||
+        p.mrn.includes(clean) ||
+        (detectedName && p.name.toLowerCase().includes(detectedName.toLowerCase())) ||
+        rawText.toLowerCase().includes(p.name.toLowerCase())
+      );
+
+      if (found) {
+        matchedPatient = {
+          mrn: found.mrn,
+          name: found.name,
+          bed: found.bed,
+          ward: found.ward?.name || 'Ward 4B ICU',
+          department: found.admissionDiagnosis || 'Critical Care & Acute Inpatient Medicine',
+          attendingDoctor: {
+            name: found.attending?.name || 'Dr. Sharma, MD',
+            designation: 'Attending Intensivist & Pulmonologist',
+            department: 'Pulmonology / Critical Care',
+            phone: '+91 98765 00101',
+          },
+          attendingNurse: {
+            name: 'Nurse Priya Nair, RN',
+            designation: 'Primary Bedside BSN (ICU Certified) • ext. 4821',
+            phone: '+91 98234 88219',
+          },
+          relativeContact: {
+            name: found.emergencyContactName || 'Primary Family Contact',
+            relationship: found.emergencyContactRelation || 'Next of Kin',
+            phone: found.emergencyContactPhone || '+91 98765 00000',
+          },
+        };
+      }
     }
 
     // If still not matched, default gracefully to Anita Desai (94022-15)

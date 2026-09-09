@@ -7,6 +7,7 @@ import { AlertTriangle, CheckCircle2, Clock, Scan, Shield, FileText, Activity, C
 import { HospitalPersonQRModal } from '../components/HospitalPersonQRModal';
 import { WorkflowStepsNavBar } from '../components/WorkflowStepsNavBar';
 import { useAuth } from '../hooks/useAuth';
+import { subscribeToSync } from '../utils/syncStore';
 
 function getStatusChip(status: string) {
   const map: Record<string, { bg: string; color: string; label: string }> = {
@@ -51,19 +52,16 @@ export default function PatientEMARPage() {
   };
 
   useEffect(() => {
+    const unsub = subscribeToSync(() => {
+      refetchAll();
+    });
     const handleMedAdministered = () => {
       refetchAll();
     };
     window.addEventListener('smartmed:medication_administered', handleMedAdministered);
-    const handleStorage = (e: StorageEvent) => {
-      if (e.key === 'smartmed_last_administered') {
-        refetchAll();
-      }
-    };
-    window.addEventListener('storage', handleStorage);
     return () => {
+      unsub();
       window.removeEventListener('smartmed:medication_administered', handleMedAdministered);
-      window.removeEventListener('storage', handleStorage);
     };
   }, [id]);
 

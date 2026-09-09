@@ -26,6 +26,8 @@ import { PatientQRModal } from './components/PatientQRModal';
 import { QRScannerModal } from './components/QRScannerModal';
 import { generateToken } from './data/mockHospitalData';
 import { buildPatientQRPayload } from './utils/qrHelper';
+import { patientService } from '../services/api.services';
+import { subscribeToSync } from '../utils/syncStore';
 import {
   RotateCcw,
   Users,
@@ -57,6 +59,17 @@ export default function ReceptionistPage() {
   const [patientForCaseFile, setPatientForCaseFile] = useState<Patient | null>(null);
   const [patientForAdmit, setPatientForAdmit] = useState<Patient | null>(null);
 
+  // Live multi-portal synchronization
+  useEffect(() => {
+    const unsub = subscribeToSync((event) => {
+      if (event.type === 'PATIENT_ADDED') {
+        const fresh = getStoredPatients();
+        setPatients(fresh);
+      }
+    });
+    return unsub;
+  }, []);
+
   // Keep state saved in storage
   useEffect(() => {
     saveStoredPatients(patients);
@@ -79,6 +92,7 @@ export default function ReceptionistPage() {
   const handleAddPatient = (newPatient: Patient) => {
     const updated = [newPatient, ...patients];
     setPatients(updated);
+    patientService.create(newPatient);
 
     // Update doctor queue count
     setDoctors((prev) =>
@@ -120,6 +134,7 @@ export default function ReceptionistPage() {
             setPatientForAdmit(updatedPatient);
           }
 
+          patientService.create(updatedPatient);
           return updatedPatient;
         }
         return p;
@@ -162,6 +177,7 @@ export default function ReceptionistPage() {
             setPatientForAdmit(updatedPatient);
           }
 
+          patientService.create(updatedPatient);
           return updatedPatient;
         }
         return p;

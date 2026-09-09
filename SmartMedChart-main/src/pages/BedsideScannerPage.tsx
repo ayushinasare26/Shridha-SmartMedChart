@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { patientService, scheduleService } from '../services/api.services';
+import { subscribeToSync } from '../utils/syncStore';
 import {
   Scan, CheckCircle2, AlertTriangle, User, Pill, Hash, MapPin, Clock,
   Loader2, QrCode, Camera, CameraOff, RefreshCw, Upload,
@@ -61,7 +62,7 @@ export default function BedsideScannerPage() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const isProcessingFrame = useRef(false);
 
-  const { data: patients = [] } = useQuery({
+  const { data: patients = [], refetch: refetchPatients } = useQuery({
     queryKey: ['patients-active'],
     queryFn: () => patientService.getAll({ status: 'ACTIVE' }),
   });
@@ -69,18 +70,29 @@ export default function BedsideScannerPage() {
   const effectivePatientId = scannedPatientId || selectedPatientId;
 
   // Fetch target patient if we have effectivePatientId
-  const { data: patient } = useQuery({
+  const { data: patient, refetch: refetchPatient } = useQuery({
     queryKey: ['patient', effectivePatientId],
     queryFn: () => patientService.getById(effectivePatientId!),
     enabled: !!effectivePatientId,
   });
 
   // Fetch schedules for the patient
-  const { data: schedules = [] } = useQuery({
+  const { data: schedules = [], refetch: refetchSchedules } = useQuery({
     queryKey: ['patient-schedules-scan', effectivePatientId],
     queryFn: () => scheduleService.getAll({ patientId: effectivePatientId! }),
     enabled: !!effectivePatientId,
   });
+
+  useEffect(() => {
+    const unsub = subscribeToSync(() => {
+      refetchPatients();
+      if (effectivePatientId) {
+        refetchPatient();
+        refetchSchedules();
+      }
+    });
+    return unsub;
+  }, [effectivePatientId, refetchPatients, refetchPatient, refetchSchedules]);
 
   // If we only have scheduleId but no patientId, find the patient from the schedule
   useEffect(() => {

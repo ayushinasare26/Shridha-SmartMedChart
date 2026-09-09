@@ -6,8 +6,8 @@ declare global {
   var __prisma: PrismaClient | undefined;
 }
 
-// Automatically resolve DATABASE_URL if missing (e.g. on Vercel deployment)
-if (!process.env.DATABASE_URL) {
+// Automatically resolve DATABASE_URL if missing or invalid SQLite protocol
+if (!process.env.DATABASE_URL || !process.env.DATABASE_URL.startsWith('file:')) {
   const possiblePaths = [
     path.join(process.cwd(), 'prisma', 'smartmed.db'),
     path.join(process.cwd(), 'SmartMedChart-main', 'prisma', 'smartmed.db'),

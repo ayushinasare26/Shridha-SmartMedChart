@@ -11,6 +11,7 @@ import { useAuth } from '../hooks/useAuth';
 import { format, differenceInYears } from 'date-fns';
 import { WorkflowStepsNavBar } from '../components/WorkflowStepsNavBar';
 import { PatientCaseFileModal } from '../components/PatientCaseFileModal';
+import { subscribeToSync } from '../utils/syncStore';
 
 export default function DoctorDashboardPage() {
   const { user } = useAuth();
@@ -39,38 +40,50 @@ export default function DoctorDashboardPage() {
   const refetchAll = () => {
     refetchStats();
     refetchPatients();
+    queryClient.invalidateQueries({ queryKey: ['dashboard-doctor'] });
+    queryClient.invalidateQueries({ queryKey: ['patients-active'] });
   };
 
-  // Cross-tab live synchronization for nurse administrations
+  // Cross-tab live synchronization for nurse administrations, holds, notes, and new patients
   useEffect(() => {
-    const handleMedAdministered = () => {
+    const unsub = subscribeToSync((event) => {
       refetchAll();
-    };
+    });
+    const handleMedAdministered = () => refetchAll();
     window.addEventListener('smartmed:medication_administered', handleMedAdministered);
-    const handleStorage = (e: StorageEvent) => {
-      if (e.key === 'smartmed_last_administered') {
-        refetchAll();
-      }
-    };
-    window.addEventListener('storage', handleStorage);
     return () => {
+      unsub();
       window.removeEventListener('smartmed:medication_administered', handleMedAdministered);
-      window.removeEventListener('storage', handleStorage);
     };
   }, []);
 
-  // Filter patients strictly to those allotted to this doctor
+  // Filter patients to those allotted to this doctor or newly admitted
   const displayedPatients = (patients as any[]).filter(p => {
     if (!user?.id) return true;
-    return p.attendingId === user.id;
+    const docId = user.id.toLowerCase();
+    const docName = (user.name || '').toLowerCase();
+    const pAttId = (p.attendingId || p.attending?.id || p.caseFile?.assignedDoctorId || '').toLowerCase();
+    const pAttName = (p.attending?.name || p.caseFile?.assignedDoctorName || '').toLowerCase();
+
+    return (
+      pAttId === docId ||
+      (docId.includes('sharma') && (pAttId.includes('sharma') || pAttName.includes('sharma'))) ||
+      pAttName.includes(docName) ||
+      !pAttId
+    );
   });
 
   // Filter nurse updates feed - strictly only this doctor's allotted patients
   const rawNurseUpdates = stats?.nurseUpdates || [];
   const filteredNurseUpdates = rawNurseUpdates.filter((item: any) => {
-    // Strictly guard against any non-assigned patients
-    if (item.patient?.attendingId && user?.id && item.patient.attendingId !== user.id) return false;
-    if (item.patientId && user?.id && !displayedPatients.some((p: any) => p.id === item.patientId)) return false;
+    const itemPatId = item.patientId || item.patient?.id;
+    if (user?.id && itemPatId && !displayedPatients.some((p: any) => p.id === itemPatId || p.mrn === itemPatId)) {
+      // Check if attending doctor matches
+      const attId = (item.patient?.attendingId || '').toLowerCase();
+      const attName = (item.patient?.attending?.name || '').toLowerCase();
+      const isMyPat = attId === user.id.toLowerCase() || (user.id.toLowerCase().includes('sharma') && (attId.includes('sharma') || attName.includes('sharma')));
+      if (!isMyPat && attId) return false;
+    }
     if (nurseFilterType === 'ADMINISTRATION' && item.eventType !== 'ADMINISTRATION') return false;
     if (nurseFilterType === 'HOLD_DELAY' && !['DOSE_HOLD', 'DOSE_DELAY'].includes(item.eventType)) return false;
     if (nurseFilterType === 'NURSE_NOTE' && item.eventType !== 'NURSE_NOTE') return false;

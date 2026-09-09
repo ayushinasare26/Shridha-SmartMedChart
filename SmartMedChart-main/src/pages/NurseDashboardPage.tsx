@@ -5,6 +5,7 @@ import { format } from 'date-fns';
 import { AlertTriangle, Clock, CheckCircle2, Timer, Activity, Plus, RefreshCw, User, ExternalLink, QrCode, Scan } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { WorkflowStepsNavBar } from '../components/WorkflowStepsNavBar';
+import { subscribeToSync } from '../utils/syncStore';
 
 const WARD = 'WARD-4B-ICU';
 
@@ -48,21 +49,18 @@ export default function NurseDashboardPage() {
     refetchSchedules();
   };
 
-  // Cross-tab synchronization for bedside administrations
+  // Cross-tab synchronization for bedside administrations and doctor prescriptions
   useEffect(() => {
+    const unsub = subscribeToSync(() => {
+      refetch();
+    });
     const handleMedAdministered = () => {
       refetch();
     };
     window.addEventListener('smartmed:medication_administered', handleMedAdministered);
-    const handleStorage = (e: StorageEvent) => {
-      if (e.key === 'smartmed_last_administered') {
-        refetch();
-      }
-    };
-    window.addEventListener('storage', handleStorage);
     return () => {
+      unsub();
       window.removeEventListener('smartmed:medication_administered', handleMedAdministered);
-      window.removeEventListener('storage', handleStorage);
     };
   }, []);
 

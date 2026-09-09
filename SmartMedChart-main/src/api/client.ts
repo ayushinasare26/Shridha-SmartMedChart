@@ -32,7 +32,18 @@ const processQueue = (error: any, token: string | null = null) => {
 };
 
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    // If an API request receives an HTML response (e.g. when static Vercel host rewrites /api/* to index.html),
+    // treat it as an unavailable endpoint so React Query and services catch it rather than treating HTML as data
+    const contentType = response.headers?.['content-type'] || '';
+    if (
+      typeof response.data === 'string' &&
+      (contentType.includes('text/html') || response.data.trim().startsWith('<!DOCTYPE') || response.data.trim().startsWith('<html'))
+    ) {
+      return Promise.reject(new Error('API endpoint returned HTML instead of JSON'));
+    }
+    return response;
+  },
   async (error) => {
     const originalRequest = error?.config;
 

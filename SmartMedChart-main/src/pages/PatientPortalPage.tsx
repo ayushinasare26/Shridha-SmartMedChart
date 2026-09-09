@@ -13,8 +13,10 @@ import {
   TrendingUp, RefreshCw, Send, CheckCircle, UserCheck, Droplet,
   HeartPulse, Thermometer, ShieldAlert, Award, CreditCard, Sparkles
 } from 'lucide-react';
+import { format } from 'date-fns';
 import { QRCodeSVG } from 'qrcode.react';
 import { downloadDiagnosticReportPdf, downloadPrescriptionSheetPdf, downloadConsentCertificatePdf } from '../utils/pdfGenerator';
+import { subscribeToSync, getSyncedPrescriptions, getSyncedSchedules } from '../utils/syncStore';
 
 import { IndianPatientConfig, INDIAN_PATIENTS, SHRIDHA_HOSPITAL_INFO, getIndianPatient } from '../data/indianPatients';
 
@@ -81,15 +83,12 @@ export default function PatientPortalPage() {
 
   // Cross-tab & multi-station live synchronization
   useEffect(() => {
+    const unsub = subscribeToSync(() => refetch());
     const handleMedAdministered = () => refetch();
     window.addEventListener('smartmed:medication_administered', handleMedAdministered);
-    const handleStorage = (e: StorageEvent) => {
-      if (e.key === 'smartmed_last_administered') refetch();
-    };
-    window.addEventListener('storage', handleStorage);
     return () => {
+      unsub();
       window.removeEventListener('smartmed:medication_administered', handleMedAdministered);
-      window.removeEventListener('storage', handleStorage);
     };
   }, [refetch]);
 
@@ -187,13 +186,56 @@ export default function PatientPortalPage() {
           .slice(0, 2),
       },
       medUpdate: defaultProfile.medUpdate,
-      medications: defaultProfile.medications,
-      timeline: defaultProfile.timeline,
+      medications: (() => {
+        const localPrxs = getSyncedPrescriptions(currentMrn);
+        const dbPrxs = dbPatient?.prescriptions || [];
+        const allPrxs = [...dbPrxs, ...localPrxs.filter((lp: any) => !dbPrxs.some((dp: any) => dp.id === lp.id))];
+
+        const dynamicMeds = allPrxs.map((prx: any) => ({
+          id: prx.id,
+          name: prx.medicationName,
+          subtitle: `${prx.dose}${prx.unit} · ${prx.route}`,
+          category: prx.isStatOrder ? 'stat' : 'regular',
+          statusType: prx.status === 'COMPLETED' ? 'given' : prx.status === 'HELD' ? 'stopped' : 'due',
+          scheduleTimes: ['08:00 AM', '02:00 PM', '08:00 PM'],
+          dosageText: `${prx.dose} ${prx.unit} via ${prx.route}`,
+          instructions: prx.indication || 'Administer as ordered by attending clinician',
+          saltName: prx.genericName || prx.medicationName,
+          prescribedBy: prx.prescriber?.name || 'Dr. Sharma, MD',
+          badge: prx.isStatOrder ? 'STAT DOSE' : 'Active Clinical Rx',
+          colorClass: prx.isStatOrder ? 'rose' : 'blue',
+        }));
+
+        return [
+          ...dynamicMeds,
+          ...defaultProfile.medications.filter(m => !dynamicMeds.some(dm => dm.name.toLowerCase().includes(m.name.toLowerCase()) || m.name.toLowerCase().includes(dm.name.toLowerCase()))),
+        ];
+      })(),
+      timeline: (() => {
+        const localSchedules = getSyncedSchedules(currentMrn);
+        const dynamicTimeline = localSchedules
+          .filter((s: any) => s.status === 'GIVEN')
+          .map((s: any) => ({
+            id: `tl-${s.id}`,
+            time: format(new Date(s.administeredAt || s.scheduledTime || Date.now()), 'hh:mm a'),
+            title: `${s.prescription?.medicationName || 'Medication'} Administered`,
+            subtitle: `${s.dose || ''}${s.doseUnit || ''} · ${s.route || ''}`,
+            status: 'Given',
+            statusClass: 'text-emerald-600 bg-emerald-50 border-emerald-200',
+            nurse: s.administeredBy?.name || 'Nurse Priya, RN',
+            verified: true,
+          }));
+
+        return [
+          ...dynamicTimeline,
+          ...defaultProfile.timeline,
+        ];
+      })(),
       reports: defaultProfile.reports,
       notifications: defaultProfile.notifications,
       history: defaultProfile.history,
     };
-  }, [dbPatient, defaultProfile, calculatedAge, resolvedAvatar, cleanWardName, cleanBedNumber]);
+  }, [dbPatient, defaultProfile, calculatedAge, resolvedAvatar, cleanWardName, cleanBedNumber, currentMrn]);
 
   // QR Code download handler
   const handleDownloadQR = () => {
