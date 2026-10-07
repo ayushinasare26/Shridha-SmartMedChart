@@ -21,7 +21,7 @@ router.get('/', async (_req: AuthRequest, res: Response, next: NextFunction) => 
 router.get('/:unit', async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const ward = await prisma.ward.findUnique({
-      where: { unit: req.params.unit },
+      where: { unit: req.params.unit as string },
       include: {
         patients: {
           where: { status: 'ACTIVE' },

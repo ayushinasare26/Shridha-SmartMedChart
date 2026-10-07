@@ -31,7 +31,7 @@ router.post('/:id/override', async (req: AuthRequest, res: Response, next: NextF
   try {
     const { overrideReason } = req.body;
     const alert = await prisma.safetyAlert.update({
-      where: { id: req.params.id },
+      where: { id: req.params.id as string },
       data: {
         isOverridden: true,
         isResolved: true,
@@ -58,7 +58,7 @@ router.post('/:id/override', async (req: AuthRequest, res: Response, next: NextF
 router.patch('/:id/resolve', async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const alert = await prisma.safetyAlert.update({
-      where: { id: req.params.id },
+      where: { id: req.params.id as string },
       data: { isResolved: true, resolvedAt: new Date() },
     });
     res.json(alert);

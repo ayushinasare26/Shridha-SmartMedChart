@@ -29,7 +29,7 @@ export const getPrescriptions = async (req: AuthRequest, res: Response, next: Ne
 export const getPrescription = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     const prescription = await prisma.prescription.findUnique({
-      where: { id: req.params.id },
+      where: { id: req.params.id as string },
       include: {
         prescriber: { select: { id: true, name: true, role: true } },
         patient: { include: { allergies: true } },
@@ -129,7 +129,7 @@ export const createPrescription = async (req: AuthRequest, res: Response, next: 
 export const updatePrescription = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     const prescription = await prisma.prescription.update({
-      where: { id: req.params.id },
+      where: { id: req.params.id as string },
       data: req.body,
     });
     res.json(prescription);
@@ -140,7 +140,7 @@ export const signPrescription = async (req: AuthRequest, res: Response, next: Ne
   try {
     const { signingPin } = req.body;
     const prescription = await prisma.prescription.update({
-      where: { id: req.params.id },
+      where: { id: req.params.id as string },
       data: { status: 'ACTIVE' },
     });
     await createAuditLog({
@@ -160,7 +160,7 @@ export const overridePrescription = async (req: AuthRequest, res: Response, next
   try {
     const { overrideReason, alertId } = req.body;
     const prescription = await prisma.prescription.update({
-      where: { id: req.params.id },
+      where: { id: req.params.id as string },
       data: { overrideReason },
     });
     if (alertId) {
@@ -192,11 +192,11 @@ export const holdPrescription = async (req: AuthRequest, res: Response, next: Ne
   try {
     const { holdReason } = req.body;
     const prescription = await prisma.prescription.update({
-      where: { id: req.params.id },
+      where: { id: req.params.id as string },
       data: { status: 'HELD' },
     });
     await prisma.medicationSchedule.updateMany({
-      where: { prescriptionId: req.params.id, status: 'PENDING' },
+      where: { prescriptionId: req.params.id as string, status: 'PENDING' },
       data: { status: 'HELD', holdReason },
     });
     await createAuditLog({
@@ -216,11 +216,11 @@ export const holdPrescription = async (req: AuthRequest, res: Response, next: Ne
 export const discontinuePrescription = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     const prescription = await prisma.prescription.update({
-      where: { id: req.params.id },
+      where: { id: req.params.id as string },
       data: { status: 'DISCONTINUED', stopDate: new Date() },
     });
     await prisma.medicationSchedule.updateMany({
-      where: { prescriptionId: req.params.id, status: 'PENDING' },
+      where: { prescriptionId: req.params.id as string, status: 'PENDING' },
       data: { status: 'CANCELLED' },
     });
     await createAuditLog({
@@ -238,7 +238,7 @@ export const discontinuePrescription = async (req: AuthRequest, res: Response, n
 export const pharmacyVerify = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     const prescription = await prisma.prescription.update({
-      where: { id: req.params.id },
+      where: { id: req.params.id as string },
       data: {
         pharmacyVerified: true,
         pharmacyVerifiedAt: new Date(),

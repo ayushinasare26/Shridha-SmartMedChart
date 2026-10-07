@@ -89,7 +89,7 @@ export const getWardSchedule = async (req: AuthRequest, res: Response, next: Nex
 export const getSchedule = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     const schedule = await prisma.medicationSchedule.findUnique({
-      where: { id: req.params.id },
+      where: { id: req.params.id as string },
       include: scheduleInclude,
     });
     if (!schedule) { res.status(404).json({ error: 'Schedule not found' }); return; }
@@ -241,7 +241,7 @@ export const holdSchedule = async (req: AuthRequest, res: Response, next: NextFu
   try {
     const { holdReason } = req.body;
     const schedule = await prisma.medicationSchedule.update({
-      where: { id: req.params.id },
+      where: { id: req.params.id as string },
       data: { status: 'HELD', holdReason },
     });
     await createAuditLog({
@@ -262,7 +262,7 @@ export const delaySchedule = async (req: AuthRequest, res: Response, next: NextF
   try {
     const { delayReason, delayMinutes } = req.body;
     const schedule = await prisma.medicationSchedule.update({
-      where: { id: req.params.id },
+      where: { id: req.params.id as string },
       data: { status: 'DELAYED', delayReason, delayMinutes: parseInt(delayMinutes || '0') },
     });
     res.json(schedule);

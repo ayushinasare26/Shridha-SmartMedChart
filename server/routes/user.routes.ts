@@ -257,14 +257,14 @@ router.post('/', authorize('ADMIN') as any, async (req: AuthRequest, res: Respon
 // PATCH /api/users/:id/duty — Toggle clinician on-duty status
 router.patch('/:id/duty', authorize('ADMIN') as any, async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
-    const existing = await prisma.user.findUnique({ where: { id: req.params.id } });
+    const existing = await prisma.user.findUnique({ where: { id: req.params.id as string } });
     if (!existing) {
       res.status(404).json({ error: 'Staff member not found' });
       return;
     }
 
     const updated = await prisma.user.update({
-      where: { id: req.params.id },
+      where: { id: req.params.id as string },
       data: { onDuty: !existing.onDuty },
       select: { id: true, name: true, role: true, staffId: true, onDuty: true },
     });
@@ -294,7 +294,7 @@ router.patch('/:id', authorize('ADMIN') as any, async (req: AuthRequest, res: Re
       data.passwordHash = await bcrypt.hash(password, 12);
     }
     const user = await prisma.user.update({
-      where: { id: req.params.id },
+      where: { id: req.params.id as string },
       data,
       select: {
         id: true,
