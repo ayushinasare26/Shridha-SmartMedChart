@@ -1,0 +1,24 @@
+# Enforce consistent LF line endings across all text files
+* text=auto eol=lf
+
+# Explicitly declare text formats
+*.ts text eol=lf
+*.tsx text eol=lf
+*.js text eol=lf
+*.jsx text eol=lf
+*.json text eol=lf
+*.css text eol=lf
+*.html text eol=lf
+*.md text eol=lf
+*.prisma text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+
+# Binary files
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.svg text eol=lf
+*.db binary
+*.db.bak binary
+*.sqlite binary

@@ -1,0 +1,19 @@
+node_modules/
+dist/
+.env
+.env.local
+*.log
+.DS_Store
+coverage/
+.nyc_output/
+prisma/migrations/
+
+# SQLite databases & backups
+*.db
+*.db-journal
+*.db.bak
+*.sqlite
+*.sqlite3
+prisma/*.db
+prisma/*.db.bak
+backup_db/
