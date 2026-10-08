@@ -1,6 +1,6 @@
 {
   "name": "smartmedchart",
-  "version": "2.4.1",
+  "version": "2.4.2",
   "description": "SmartMedChart — Clinical Medication Management System",
   "private": true,
   "scripts": {
