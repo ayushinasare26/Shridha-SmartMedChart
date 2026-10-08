@@ -1,301 +1,211 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider      = "prisma-client-js"
   binaryTargets = ["native", "rhel-openssl-1.0.x", "rhel-openssl-3.0.x", "debian-openssl-1.1.x", "debian-openssl-3.0.x"]
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
-// UserRole: DOCTOR | NURSE | PHARMACIST | ADMIN
-// PatientStatus: ACTIVE | DISCHARGED | TRANSFERRED
-// PrescriptionStatus: PENDING | ACTIVE | STAT | HELD | DISCONTINUED | COMPLETED
-// ScheduleStatus: PENDING | GIVEN | HELD | DELAYED | MISSED | CANCELLED
-// AlertSeverity: INFO | WARNING | HIGH | CRITICAL
-// AlertType: ALLERGY_CONFLICT | DRUG_INTERACTION | DOSE_RANGE | DUPLICATE_ORDER | RENAL_DOSE | HEPATIC_DOSE | HIGH_ALERT_MED | STAT_URGENT
-// NotificationPriority: LOW | NORMAL | HIGH | URGENT
-// ShiftType: DAY | EVENING | NIGHT
-// VerificationMethod: BARCODE_SCAN | MANUAL_ENTRY | QR_CODE
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model AdministrationRecord_rows {
+  id                 String    @id
+  scheduleId         String?
+  patientId          String?
+  administeredById   String?
+  dose               BigInt?
+  unit               String?
+  route              String?
+  notes              String?
+  fiveRightsVerified Boolean?
+  rightPatient       Boolean?
+  rightDrug          Boolean?
+  rightDose          Boolean?
+  rightRoute         Boolean?
+  rightTime          Boolean?
+  barcodeScanned     Boolean?
+  witnessId          String?
+  signedAt           DateTime? @db.Timestamptz(6)
+  adminId            String?
+  safetyScore        BigInt?
+}
 
-model User {
-  id           String   @id @default(uuid())
-  email        String   @unique
-  name         String
-  role         String   // DOCTOR | NURSE | PHARMACIST | ADMIN
-  passwordHash String
-  staffId      String   @unique
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model Allergy_rows {
+  id              String    @id
+  patientId       String?
+  allergen        String?
+  severity        String?
+  reaction        String?
+  verifiedAt      DateTime? @db.Timestamptz(6)
+  verifiedBy      String?
+  crossReactsWith String?
+  createdAt       DateTime? @db.Timestamptz(6)
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model AuditLog_rows {
+  id          String    @id
+  userId      String?
+  patientId   String?
+  action      String?
+  resource    String?
+  resourceId  String?
+  detail      String?
+  ipAddress   String?
+  workstation String?
+  hmacHash    String?
+  severity    String?
+  createdAt   DateTime? @db.Timestamptz(6)
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model MedicationSchedule_rows {
+  id                 String    @id
+  prescriptionId     String?
+  patientId          String?
+  scheduledTime      DateTime? @db.Timestamptz(6)
+  status             String?
+  administeredById   String?
+  administeredAt     String?
+  verificationMethod String?
+  holdReason         String?
+  delayReason        String?
+  delayMinutes       String?
+  preparedAt         String?
+  dispensedFrom      String?
+  batchNumber        String?
+  createdAt          DateTime? @db.Timestamptz(6)
+  updatedAt          DateTime? @db.Timestamptz(6)
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model Notification_rows {
+  id        String    @id
+  userId    String?
+  patientId String?
+  type      String?
+  message   String?
+  detail    String?
+  isRead    Boolean?
+  priority  String?
+  createdAt DateTime? @db.Timestamptz(6)
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model Patient_rows {
+  id                       String    @id
+  mrn                      String?
+  name                     String?
+  dob                      DateTime? @db.Timestamptz(6)
+  sex                      String?
+  weight                   Float?
+  weightUnit               String?
+  wardId                   String?
+  bed                      String?
+  attendingId              String?
+  admissionDiagnosis       String?
+  npoStatus                Boolean?
+  codeStatus               String?
+  isolationStatus          Boolean?
+  status                   String?
+  eGFR                     BigInt?
+  creatinine               Float?
+  bilirubin                Float?
+  platelets                BigInt?
+  emergencyContactName     String?
+  emergencyContactRelation String?
+  emergencyContactPhone    String?
+  createdAt                DateTime? @db.Timestamptz(6)
+  updatedAt                DateTime? @db.Timestamptz(6)
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model Prescription_rows {
+  id                 String    @id
+  patientId          String?
+  prescriberId       String?
+  medicationName     String?
+  genericName        String?
+  medicationClass    String?
+  dose               Float?
+  unit               String?
+  route              String?
+  frequency          String?
+  startDate          DateTime? @db.Timestamptz(6)
+  stopDate           String?
+  status             String?
+  indication         String?
+  isStatOrder        Boolean?
+  isContinuous       Boolean?
+  infusionRate       String?
+  pharmacyVerified   Boolean?
+  pharmacyVerifiedAt String?
+  pharmacyVerifiedBy String?
+  requiresCoSign     Boolean?
+  coSignedById       String?
+  coSignedAt         String?
+  overrideReason     String?
+  formularyRef       String?
+  rxNumber           String?
+  createdAt          DateTime? @db.Timestamptz(6)
+  updatedAt          DateTime? @db.Timestamptz(6)
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model RefreshToken_rows {
+  id         BigInt   @id @default(autoincrement())
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model SafetyAlert_rows {
+  id             String    @id
+  patientId      String?
+  prescriptionId String?
+  alertType      String?
+  severity       String?
+  message        String?
+  detail         String?
+  isOverridden   Boolean?
+  isResolved     Boolean?
+  overrideReason String?
+  overrideById   String?
+  overriddenAt   String?
+  resolvedAt     String?
+  createdAt      DateTime? @db.Timestamptz(6)
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model User_rows {
+  id            String    @id
+  email         String?
+  name          String?
+  role          String?
+  passwordHash  String?
+  staffId       String?
   ward          String?
   department    String?
   title         String?
   specialty     String?
   licenseNumber String?
-  shiftType     String?  @default("MORNING") // MORNING | ROTATING | NIGHT
-  onDuty        Boolean  @default(true)
+  shiftType     String?
+  onDuty        Boolean?
   avatarUrl     String?
-  isActive      Boolean  @default(true)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-
-  prescriptions        Prescription[]         @relation("PrescribedBy")
-  administrations      AdministrationRecord[] @relation("AdministeredBy")
-  witnessedAdmin       AdministrationRecord[] @relation("WitnessedBy")
-  overriddenAlerts     SafetyAlert[]          @relation("OverriddenBy")
-  auditLogs            AuditLog[]
-  notifications        Notification[]
-  shifts               Shift[]
-  scheduleAdministered MedicationSchedule[]   @relation("AdminBy")
-  authoredNotes        ClinicalNote[]         @relation("AuthoredNotes")
-  acknowledgedNotes    ClinicalNote[]         @relation("AcknowledgedNotes")
-
-  refreshTokens RefreshToken[]
+  isActive      Boolean?
+  createdAt     DateTime? @db.Timestamptz(6)
+  updatedAt     DateTime? @db.Timestamptz(6)
 }
 
-model RefreshToken {
-  id        String   @id @default(uuid())
-  token     String   @unique
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  expiresAt DateTime
-  createdAt DateTime @default(now())
-}
-
-model Ward {
-  id        String   @id @default(uuid())
-  name      String
-  unit      String   @unique
-  capacity  Int
-  occupancy Int      @default(0)
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model Ward_rows {
+  id        String    @id
+  name      String?
+  unit      String?
+  capacity  BigInt?
+  occupancy BigInt?
   location  String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  shifts   Shift[]
-  patients Patient[]
+  createdAt DateTime? @db.Timestamptz(6)
+  updatedAt DateTime? @db.Timestamptz(6)
 }
-
-model Shift {
-  id        String   @id @default(uuid())
-  wardId    String
-  ward      Ward     @relation(fields: [wardId], references: [id])
-  userId    String
-  user      User     @relation(fields: [userId], references: [id])
-  startTime DateTime
-  endTime   DateTime
-  type      String   // DAY | EVENING | NIGHT
-  createdAt DateTime @default(now())
-}
-
-model Patient {
-  id                 String   @id @default(uuid())
-  mrn                String   @unique
-  name               String
-  dob                DateTime
-  sex                String
-  weight             Float
-  weightUnit         String   @default("kg")
-  wardId             String?
-  ward               Ward?    @relation(fields: [wardId], references: [id])
-  bed                String?
-  attendingId        String?
-  admissionDiagnosis String?
-  npoStatus          Boolean  @default(false)
-  codeStatus         String   @default("Full")
-  isolationStatus    Boolean  @default(false)
-  status             String   @default("ACTIVE") // ACTIVE | DISCHARGED | TRANSFERRED
-  eGFR               Float?
-  creatinine         Float?
-  bilirubin          Float?
-  platelets          Float?
-  emergencyContactName     String?
-  emergencyContactRelation String?
-  emergencyContactPhone    String?
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
-
-  allergies       Allergy[]
-  prescriptions   Prescription[]
-  schedules       MedicationSchedule[]
-  administrations AdministrationRecord[]
-  safetyAlerts    SafetyAlert[]
-  auditLogs       AuditLog[]
-  notifications   Notification[]
-  clinicalNotes   ClinicalNote[]
-}
-
-model Allergy {
-  id              String    @id @default(uuid())
-  patientId       String
-  patient         Patient   @relation(fields: [patientId], references: [id], onDelete: Cascade)
-  allergen        String
-  severity        String    // Mild | Moderate | Severe | Anaphylaxis
-  reaction        String
-  verifiedAt      DateTime?
-  verifiedBy      String?
-  crossReactsWith String?
-  createdAt       DateTime  @default(now())
-}
-
-model Prescription {
-  id                 String    @id @default(uuid())
-  patientId          String
-  patient            Patient   @relation(fields: [patientId], references: [id])
-  prescriberId       String
-  prescriber         User      @relation("PrescribedBy", fields: [prescriberId], references: [id])
-  medicationName     String
-  genericName        String?
-  medicationClass    String?
-  dose               Float
-  unit               String
-  route              String
-  frequency          String
-  startDate          DateTime
-  stopDate           DateTime?
-  status             String    @default("ACTIVE") // PENDING | ACTIVE | STAT | HELD | DISCONTINUED | COMPLETED
-  indication         String?
-  isStatOrder        Boolean   @default(false)
-  isContinuous       Boolean   @default(false)
-  infusionRate       String?
-  pharmacyVerified   Boolean   @default(false)
-  pharmacyVerifiedAt DateTime?
-  pharmacyVerifiedBy String?
-  requiresCoSign     Boolean   @default(false)
-  coSignedById       String?
-  coSignedAt         DateTime?
-  overrideReason     String?
-  formularyRef       String?
-  rxNumber           String?
-  createdAt          DateTime  @default(now())
-  updatedAt          DateTime  @updatedAt
-
-  schedules    MedicationSchedule[]
-  safetyAlerts SafetyAlert[]
-}
-
-model MedicationSchedule {
-  id                 String    @id @default(uuid())
-  prescriptionId     String
-  prescription       Prescription @relation(fields: [prescriptionId], references: [id])
-  patientId          String
-  patient            Patient   @relation(fields: [patientId], references: [id])
-  scheduledTime      DateTime
-  status             String    @default("PENDING") // PENDING | GIVEN | HELD | DELAYED | MISSED | CANCELLED
-  administeredById   String?
-  administeredBy     User?     @relation("AdminBy", fields: [administeredById], references: [id])
-  administeredAt     DateTime?
-  verificationMethod String?   // BARCODE_SCAN | MANUAL_ENTRY | QR_CODE
-  holdReason         String?
-  delayReason        String?
-  delayMinutes       Int?
-  preparedAt         DateTime?
-  dispensedFrom      String?
-  batchNumber        String?
-  createdAt          DateTime  @default(now())
-  updatedAt          DateTime  @updatedAt
-
-  administrationRecord AdministrationRecord?
-}
-
-model AdministrationRecord {
-  id               String             @id @default(uuid())
-  scheduleId       String             @unique
-  schedule         MedicationSchedule @relation(fields: [scheduleId], references: [id])
-  patientId        String
-  patient          Patient            @relation(fields: [patientId], references: [id])
-  administeredById String
-  administeredBy   User               @relation("AdministeredBy", fields: [administeredById], references: [id])
-  dose             Float
-  unit             String
-  route            String
-  notes            String?
-  fiveRightsVerified Boolean          @default(false)
-  rightPatient     Boolean            @default(false)
-  rightDrug        Boolean            @default(false)
-  rightDose        Boolean            @default(false)
-  rightRoute       Boolean            @default(false)
-  rightTime        Boolean            @default(false)
-  barcodeScanned   Boolean            @default(false)
-  witnessId        String?
-  witness          User?              @relation("WitnessedBy", fields: [witnessId], references: [id])
-  signedAt         DateTime           @default(now())
-  adminId          String             @unique @default(uuid())
-  safetyScore      Int                @default(100)
-}
-
-model SafetyAlert {
-  id             String    @id @default(uuid())
-  patientId      String
-  patient        Patient   @relation(fields: [patientId], references: [id])
-  prescriptionId String?
-  prescription   Prescription? @relation(fields: [prescriptionId], references: [id])
-  alertType      String    // ALLERGY_CONFLICT | DRUG_INTERACTION | DOSE_RANGE | etc.
-  severity       String    // INFO | WARNING | HIGH | CRITICAL
-  message        String
-  detail         String?
-  isOverridden   Boolean   @default(false)
-  isResolved     Boolean   @default(false)
-  overrideReason String?
-  overrideById   String?
-  overrideBy     User?     @relation("OverriddenBy", fields: [overrideById], references: [id])
-  overriddenAt   DateTime?
-  resolvedAt     DateTime?
-  createdAt      DateTime  @default(now())
-}
-
-model AuditLog {
-  id          String   @id @default(uuid())
-  userId      String?
-  user        User?    @relation(fields: [userId], references: [id])
-  patientId   String?
-  patient     Patient? @relation(fields: [patientId], references: [id])
-  action      String
-  resource    String
-  resourceId  String?
-  detail      String?
-  ipAddress   String?
-  workstation String?
-  hmacHash    String
-  severity    String   @default("Normal")
-  createdAt   DateTime @default(now())
-}
-
-model Notification {
-  id        String   @id @default(uuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id])
-  patientId String?
-  patient   Patient? @relation(fields: [patientId], references: [id])
-  type      String
-  message   String
-  detail    String?
-  isRead    Boolean  @default(false)
-  priority  String   @default("NORMAL") // LOW | NORMAL | HIGH | URGENT
-  createdAt DateTime @default(now())
-}
-
-model ClinicalNote {
-  id               String    @id @default(uuid())
-  patientId        String
-  patient          Patient   @relation(fields: [patientId], references: [id], onDelete: Cascade)
-  authorId         String
-  author           User      @relation("AuthoredNotes", fields: [authorId], references: [id])
-  type             String    // DOCTOR_PROGRESS_NOTE | NURSE_SHIFT_NOTE | NURSE_BEDSIDE_NOTE | CONSULT_NOTE
-  title            String
-  content          String
-  category         String?   // SOAP | VITALS_OBSERVATION | NURSING_ASSESSMENT | ROUNDS
-  subjective       String?
-  objective        String?
-  assessment       String?
-  plan             String?
-  vitalsData       String?   // e.g. JSON string of BP, HR, SpO2, Temp, RR
-  isAcknowledged   Boolean   @default(false)
-  acknowledgedById String?
-  acknowledgedBy   User?     @relation("AcknowledgedNotes", fields: [acknowledgedById], references: [id])
-  acknowledgedAt   DateTime?
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
-}
-
