@@ -240,7 +240,7 @@ export const getPatient = async (req: AuthRequest, res: Response, next: NextFunc
 
 export const createPatient = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const patient = await prisma.patient.create({ data: req.body });
+    const patient = await prisma.patient_rows.create({ data: req.body });
     await createAuditLog({
       userId: req.user?.id,
       patientId: patient.id,
